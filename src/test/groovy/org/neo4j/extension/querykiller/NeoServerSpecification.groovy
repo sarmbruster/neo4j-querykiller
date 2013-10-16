@@ -21,8 +21,6 @@ abstract class NeoServerSpecification extends Specification {
             serverBuilder.withThirdPartyJaxRsPackage(packageName, mountpoint)
         }
         server = serverBuilder.build()
-
-                //.withThirdPartyJaxRsPackage("org.neo4j.extension.uuid", MOUNTPOINT).build();
         server.start()
         graphDB = server.database.graph
     }
