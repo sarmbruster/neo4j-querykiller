@@ -1,5 +1,7 @@
 package org.neo4j.extension.querykiller
 
+import org.neo4j.server.logging.Logger
+
 import javax.servlet.Filter
 import javax.servlet.FilterChain
 import javax.servlet.FilterConfig
@@ -14,6 +16,9 @@ import javax.servlet.http.HttpServletRequest
  */
 
 class DelayFilter implements Filter {
+
+    public static final Logger log = Logger.getLogger( DelayFilter.class );
+
     @Override
     void init(FilterConfig filterConfig) throws ServletException {
         //To change body of implemented methods use File | Settings | File Templates.
@@ -21,13 +26,14 @@ class DelayFilter implements Filter {
 
     @Override
     void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
-        chain.doFilter(request, response)
         if (request instanceof HttpServletRequest) {
             def delay = ((HttpServletRequest)request).getHeader("X-Delay")
             if (delay != null) {
+                log.warn "${Thread.currentThread()} sleeping for $delay ms"
                 sleep delay as long
             }
         }
+        chain.doFilter(request, response)
     }
 
     @Override
