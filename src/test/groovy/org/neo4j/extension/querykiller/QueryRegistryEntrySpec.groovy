@@ -1,12 +1,15 @@
 package org.neo4j.extension.querykiller
 
-import com.sun.jersey.api.json.JSONJAXBContext
+import spock.lang.Ignore
+
+//import com.sun.jersey.api.json.JSONJAXBContext
 import spock.lang.Specification
 
 import javax.xml.bind.JAXBContext
 
 class QueryRegistryEntrySpec extends Specification {
 
+    @Ignore("right now, jaxb is not used")
     def "test json marshalling"() {
         setup:
         def context = JAXBContext.newInstance(QueryRegistryEntry)
