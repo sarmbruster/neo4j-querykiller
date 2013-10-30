@@ -38,7 +38,7 @@ class QueryRegistry {
     QueryRegistryEntry abortQuery(String key) {
         QueryRegistryEntry entry = runningQueries.get(key);
         if (entry==null) {
-            throw new IllegalArgumentException("no query running with key key " + key);
+            throw new IllegalArgumentException("no query running with key " + key);
         }
         entry.getVetoGuard().setAbort(true);
         log.warn("aborted query for key " + key);

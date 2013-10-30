@@ -40,7 +40,7 @@ public class QueryKillerService {
     }
 
     @DELETE
-    @Path("queryKey")
+    @Path("/{queryKey}")
     public void killQuery(@PathParam("queryKey") String queryKey) {
         queryRegistry.abortQuery(queryKey);
     }
