@@ -1,5 +1,6 @@
 package org.neo4j.extension.querykiller;
 
+import ch.qos.logback.access.servlet.TeeFilter;
 import org.apache.commons.configuration.Configuration;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.kernel.guard.Guard;
@@ -20,6 +21,7 @@ public class Lifecycle implements SPIPluginLifecycle {
         final QueryRegistry queryRegistry = new QueryRegistry(guard);
 
         AbstractNeoServer abstractNeoServer = (AbstractNeoServer)neoServer;
+        abstractNeoServer.getWebServer().addFilter(new TeeFilter(), "/cypher"); // TeeFilter allows to consume request.getReader in a filter
         abstractNeoServer.getWebServer().addFilter(new QueryKillerFilter(queryRegistry), "/cypher"); // "/*" for catch all
 
         Collection result = singletonList(new Injectable<QueryRegistry>() {
