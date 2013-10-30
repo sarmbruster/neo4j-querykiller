@@ -11,7 +11,7 @@ public class QueryRegistryEntry implements Comparable {
     private String key;
     private String cypher;
     private Date started = new Date();
-    private String thread = Thread.currentThread().getName();
+    private long thread = Thread.currentThread().getId();
     private VetoGuard vetoGuard;
 
     public QueryRegistryEntry() {
@@ -48,11 +48,11 @@ public class QueryRegistryEntry implements Comparable {
         this.started = started;
     }
 
-    public String getThread() {
+    public long getThread() {
         return thread;
     }
 
-    public void setThread(String thread) {
+    public void setThread(long thread) {
         this.thread = thread;
     }
 
@@ -74,7 +74,7 @@ public class QueryRegistryEntry implements Comparable {
 
         if (!cypher.equals(that.cypher)) return false;
         if (!started.equals(that.started)) return false;
-        if (!thread.equals(that.thread)) return false;
+        if (thread != that.thread) return false;
         if (!vetoGuard.equals(that.vetoGuard)) return false;
 
         return true;
@@ -84,14 +84,14 @@ public class QueryRegistryEntry implements Comparable {
     public int hashCode() {
         int result = cypher.hashCode();
         result = 31 * result + started.hashCode();
-        result = 31 * result + thread.hashCode();
+        result = 31 * result + (int)thread;
         result = 31 * result + vetoGuard.hashCode();
         return result;
     }
 
     private String calculateKey() {
         // TODO: find better key, e.g. md5
-        StringBuilder sb = new StringBuilder(thread).append("_").append(started.getTime());
+        StringBuilder sb = new StringBuilder().append( thread ).append("_").append(started.getTime());
         return sb.toString();
     }
 
