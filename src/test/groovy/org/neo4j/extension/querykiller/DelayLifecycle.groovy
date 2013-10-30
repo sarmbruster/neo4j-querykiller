@@ -11,7 +11,7 @@ class DelayLifecycle implements SPIPluginLifecycle {
     @Override
     Collection<Injectable<?>> start(NeoServer neoServer) {
         AbstractNeoServer abstractNeoServer = (AbstractNeoServer)neoServer
-        abstractNeoServer.getWebServer().addFilter(new DelayFilter(), "/cypher")
+        abstractNeoServer.getWebServer().addFilter(new DelayFilter(abstractNeoServer.database.graph), "/cypher")
         return Collections.emptyList()
     }
 
