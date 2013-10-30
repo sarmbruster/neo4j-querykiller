@@ -112,7 +112,7 @@ class QueryKillerRestSpec extends NeoServerSpecification {
         0               | 50    | 0
         1               | 50    | 1
         2               | 50    | 2
-        8               | 250   | 8
+        8               | 500   | 8
     }
 
     Closure runCypherQuery = { delay ->

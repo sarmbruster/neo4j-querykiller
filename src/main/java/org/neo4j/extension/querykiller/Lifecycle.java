@@ -16,7 +16,6 @@ public class Lifecycle implements SPIPluginLifecycle {
     @Override
     public Collection<Injectable<?>> start(NeoServer neoServer) {
 
-
         Guard guard = neoServer.getDatabase().getGraph().getDependencyResolver().resolveDependency(Guard.class);
         final QueryRegistry queryRegistry = new QueryRegistry(guard);
 
