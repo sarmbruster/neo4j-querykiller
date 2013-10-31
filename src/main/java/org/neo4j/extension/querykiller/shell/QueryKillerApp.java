@@ -5,6 +5,8 @@ import org.neo4j.helpers.Service;
 import org.neo4j.shell.App;
 import org.neo4j.shell.AppCommandParser;
 import org.neo4j.shell.Continuation;
+import org.neo4j.shell.OptionDefinition;
+import org.neo4j.shell.OptionValueType;
 import org.neo4j.shell.Output;
 import org.neo4j.shell.Session;
 import org.neo4j.shell.kernel.apps.ReadOnlyGraphDatabaseApp;
@@ -15,11 +17,24 @@ import org.neo4j.shell.kernel.apps.ReadOnlyGraphDatabaseApp;
 @Service.Implementation( App.class )
 public class QueryKillerApp extends ReadOnlyGraphDatabaseApp
 {
+
+    {
+        addOptionDefinition( "k", new OptionDefinition( OptionValueType.MUST, "kills a query specified by the key" ));
+    }
+
     @Override
     protected Continuation exec( AppCommandParser parser, Session session, Output out ) throws Exception
     {
         QueryRegistryExtension queryRegistryExtension = getQueryRegistryExtension();
-        out.println( queryRegistryExtension.formatAsTable() );
+
+        String key = parser.options().get( "k" );
+        if ( (key != null) && (!key.isEmpty()) ) {
+
+            queryRegistryExtension.abortQuery( key );
+            out.println( "query for key " + key + " terminated." );
+        } else {
+            out.println( queryRegistryExtension.formatAsTable() );
+        }
         return Continuation.INPUT_COMPLETE;
     }
 
@@ -38,6 +53,6 @@ public class QueryKillerApp extends ReadOnlyGraphDatabaseApp
     @Override
     public String getDescription()
     {
-        return "description";
+        return "Lists all currently running queries. Without any arguments a list of currently running queries is printed.";
     }
 }

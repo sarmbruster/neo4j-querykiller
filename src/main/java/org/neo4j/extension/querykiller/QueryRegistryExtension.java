@@ -36,7 +36,7 @@ public class QueryRegistryExtension implements Lifecycle
         runningQueries.remove(queryMapEntry);
     }
 
-    QueryRegistryEntry abortQuery(String key) {
+    public QueryRegistryEntry abortQuery(String key) {
         QueryRegistryEntry entry = findQueryRegistryEntryForKey( key );
         entry.getVetoGuard().setAbort(true);
         log.warn("aborted query for key " + key);
