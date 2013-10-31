@@ -7,7 +7,7 @@ import org.neo4j.server.logging.Logger;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-class QueryRegistry {
+public class QueryRegistry {
 
     public static final Logger log = Logger.getLogger( QueryRegistry.class );
 

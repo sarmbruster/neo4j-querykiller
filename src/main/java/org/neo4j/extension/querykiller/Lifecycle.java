@@ -17,8 +17,9 @@ public class Lifecycle implements SPIPluginLifecycle {
     @Override
     public Collection<Injectable<?>> start(NeoServer neoServer) {
 
-        Guard guard = neoServer.getDatabase().getGraph().getDependencyResolver().resolveDependency(Guard.class);
-        final QueryRegistry queryRegistry = new QueryRegistry(guard);
+        QueryKillerExtension queryKillerExtension = neoServer.getDatabase().getGraph().getDependencyResolver().resolveDependency(QueryKillerExtension.class);
+
+        final QueryRegistry queryRegistry = queryKillerExtension.getQueryRegistry();
 
         AbstractNeoServer abstractNeoServer = (AbstractNeoServer)neoServer;
         abstractNeoServer.getWebServer().addFilter(new QueryKillerFilter(queryRegistry), "/cypher"); // "/*" for catch all
