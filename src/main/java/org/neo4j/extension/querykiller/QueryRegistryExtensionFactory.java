@@ -15,7 +15,7 @@ public class QueryRegistryExtensionFactory extends KernelExtensionFactory<QueryR
     }
 
     public QueryRegistryExtensionFactory() {
-        super("queryKiller");
+        super("queryRegistry");
     }
 
     @Override

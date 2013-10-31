@@ -15,8 +15,8 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.neo4j.extension.querykiller.http.CopyHttpServletRequest;
 
 /**
- * QueryKillerFilter registers a cypher statement with a {@QueryRegistry}
- * N.B.: it is crucial to have a {@TeeFilter} in the filterchain before since we're inspecting the payload of the request here.
+ * QueryKillerFilter registers a cypher statement with a {@QueryRegistryExtension}
+ * N.B.: a {@link CopyHttpServletRequest} is used for processing the filterChain
  */
 public class QueryKillerFilter implements Filter {
 
@@ -38,13 +38,22 @@ public class QueryKillerFilter implements Filter {
 
         HttpServletRequest copyRequest = new CopyHttpServletRequest((HttpServletRequest)request);
 
-        JsonNode query = objectMapper.readTree( copyRequest.getReader() ).get( "query" );
-        String queryKey = queryRegistryExtension.registerQuery(query.getTextValue());
+        String cypher = extractCypherFromRequest( copyRequest );
+        QueryRegistryEntry queryMapEntry = queryRegistryExtension.registerQuery(
+                cypher,
+                copyRequest.getPathInfo(),
+                copyRequest.getRemoteHost(),
+                copyRequest.getRemoteUser() );
         try {
             chain.doFilter(copyRequest, response);
         } finally {
-            queryRegistryExtension.unregisterQuery(queryKey);
+            queryRegistryExtension.unregisterQuery(queryMapEntry);
         }
+    }
+
+    private String extractCypherFromRequest( HttpServletRequest copyRequest ) throws IOException
+    {
+        return objectMapper.readTree( copyRequest.getReader() ).get( "query" ).getTextValue();
     }
 
     @Override

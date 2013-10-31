@@ -28,17 +28,20 @@ public class QueryKillerService {
     }
 
     @GET
-
     @Produces(MediaType.APPLICATION_JSON)
     public Response activeQueries() throws IOException {
 
+        long now = System.currentTimeMillis();
         List<Map<String,Object>> result = new ArrayList<>();
         for (QueryRegistryEntry q : queryRegistryExtension.getRunningQueries()) {
             Map<String, Object> map = new HashMap<>();
             map.put("cypher", q.getCypher());
             map.put("key", q.getKey());
-            map.put("started", q.getStarted());
+            map.put("since", now - q.getStarted().getTime());
             map.put("thread", q.getThread());
+            map.put("remoteHost", q.getRemoteHost());
+            map.put("remoteUser", q.getRemoteUser());
+            map.put("endPoint", q.getEndPoint());
             result.add(map);
         }
 

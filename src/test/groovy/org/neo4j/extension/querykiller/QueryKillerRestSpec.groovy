@@ -108,13 +108,16 @@ class QueryKillerRestSpec extends NeoServerSpecification {
         and:
         json.size()==0
 
+        cleanup:
+        threads.each { it.join() }
+
         where:
         numberOfQueries | delay | resultRows
         0               | 50    | 0
         1               | 50    | 1
         2               | 50    | 2
         4               | 50    | 4
-        8               | 50    | 8
+//        8               | 50    | 8
     }
 
     def "send query with delay and terminate it"() {

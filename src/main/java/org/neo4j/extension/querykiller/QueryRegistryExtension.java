@@ -1,9 +1,7 @@
 package org.neo4j.extension.querykiller;
 
-import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.apache.commons.collections.list.TreeList;
+import java.util.SortedSet;
+import java.util.concurrent.ConcurrentSkipListSet;
 
 import org.neo4j.kernel.guard.Guard;
 import org.neo4j.kernel.lifecycle.Lifecycle;
@@ -13,7 +11,7 @@ public class QueryRegistryExtension implements Lifecycle
 {
     public static final Logger log = Logger.getLogger( QueryRegistryExtension.class );
 
-    protected final ConcurrentHashMap<String, QueryRegistryEntry> runningQueries = new ConcurrentHashMap<String, QueryRegistryEntry>();
+    protected final ConcurrentSkipListSet<QueryRegistryEntry> runningQueries = new ConcurrentSkipListSet<>();
     protected final Guard guard;
 
     public QueryRegistryExtension( Guard guard )
@@ -21,35 +19,43 @@ public class QueryRegistryExtension implements Lifecycle
         this.guard = guard;
     }
 
-    public String registerQuery(String cypher) {
+    public QueryRegistryEntry registerQuery( String cypher, String endPoint, String remoteHost, String remoteUser ) {
+
         VetoGuard vetoGuard = new VetoGuard();
         guard.start(vetoGuard);
-        QueryRegistryEntry queryMapEntry = new QueryRegistryEntry(cypher, vetoGuard);
-        String key = queryMapEntry.getKey();
-        runningQueries.put(key, queryMapEntry);
-        log.warn("registered query for key " + queryMapEntry.getKey());
-        return key;
+
+        QueryRegistryEntry queryMapEntry = new QueryRegistryEntry(vetoGuard, cypher, endPoint, remoteHost, remoteUser);
+        runningQueries.add( queryMapEntry );
+        log.warn("registered query for key " + queryMapEntry);
+        return queryMapEntry;
     }
 
-    public QueryRegistryEntry unregisterQuery(String key) {
+    public void unregisterQuery( QueryRegistryEntry queryMapEntry) {
         guard.stop();
-        log.warn("unregistered query for key " + key);
-        return runningQueries.remove(key);
+        log.warn("unregistered query for key " + queryMapEntry);
+        runningQueries.remove(queryMapEntry);
     }
 
     QueryRegistryEntry abortQuery(String key) {
-        QueryRegistryEntry entry = runningQueries.get(key);
-        if (entry==null) {
-            throw new IllegalArgumentException("no query running with key " + key);
-        }
+        QueryRegistryEntry entry = findQueryRegistryEntryForKey( key );
         entry.getVetoGuard().setAbort(true);
         log.warn("aborted query for key " + key);
 
         return entry;
     }
 
-    public List<QueryRegistryEntry> getRunningQueries() {
-        return new TreeList(runningQueries.values());
+    private QueryRegistryEntry findQueryRegistryEntryForKey( String key )
+    {
+        for (QueryRegistryEntry entry: runningQueries) {
+            if (key.equals( entry.getKey() )) {
+                return entry;
+            }
+        }
+        throw new IllegalArgumentException("no query running with key " + key);
+    }
+
+    public SortedSet<QueryRegistryEntry> getRunningQueries() {
+        return runningQueries;
     }
 
 
