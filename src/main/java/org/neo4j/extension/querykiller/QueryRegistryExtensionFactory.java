@@ -6,7 +6,7 @@ import org.neo4j.kernel.guard.Guard;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
 @Service.Implementation(KernelExtensionFactory.class)
-public class QueryKillerExtensionFactory extends KernelExtensionFactory<QueryKillerExtensionFactory.Dependencies>
+public class QueryRegistryExtensionFactory extends KernelExtensionFactory<QueryRegistryExtensionFactory.Dependencies>
 {
 
     public interface Dependencies
@@ -14,13 +14,13 @@ public class QueryKillerExtensionFactory extends KernelExtensionFactory<QueryKil
         Guard getGuard();
     }
 
-    public QueryKillerExtensionFactory() {
+    public QueryRegistryExtensionFactory() {
         super("queryKiller");
     }
 
     @Override
     public Lifecycle newKernelExtension(final Dependencies dependencies) throws Throwable {
-        return new QueryKillerExtension(dependencies.getGuard());
+        return new QueryRegistryExtension(dependencies.getGuard());
     }
 
 }

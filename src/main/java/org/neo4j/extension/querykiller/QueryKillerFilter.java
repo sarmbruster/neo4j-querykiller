@@ -20,12 +20,12 @@ import org.neo4j.extension.querykiller.http.CopyHttpServletRequest;
  */
 public class QueryKillerFilter implements Filter {
 
-    private QueryRegistry queryRegistry;
+    private QueryRegistryExtension queryRegistryExtension;
     private ObjectMapper objectMapper;
 
 
-    public QueryKillerFilter(QueryRegistry queryRegistry) {
-        this.queryRegistry = queryRegistry;
+    public QueryKillerFilter( QueryRegistryExtension queryRegistryExtension) {
+        this.queryRegistryExtension = queryRegistryExtension;
     }
 
     @Override
@@ -39,11 +39,11 @@ public class QueryKillerFilter implements Filter {
         HttpServletRequest copyRequest = new CopyHttpServletRequest((HttpServletRequest)request);
 
         JsonNode query = objectMapper.readTree( copyRequest.getReader() ).get( "query" );
-        String queryKey = queryRegistry.registerQuery(query.getTextValue());
+        String queryKey = queryRegistryExtension.registerQuery(query.getTextValue());
         try {
             chain.doFilter(copyRequest, response);
         } finally {
-            queryRegistry.unregisterQuery(queryKey);
+            queryRegistryExtension.unregisterQuery(queryKey);
         }
     }
 

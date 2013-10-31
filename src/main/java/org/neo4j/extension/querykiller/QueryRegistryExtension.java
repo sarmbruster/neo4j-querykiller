@@ -1,21 +1,23 @@
 package org.neo4j.extension.querykiller;
 
-import org.apache.commons.collections.list.TreeList;
-import org.neo4j.kernel.guard.Guard;
-import org.neo4j.server.logging.Logger;
-
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class QueryRegistry {
+import org.apache.commons.collections.list.TreeList;
 
-    public static final Logger log = Logger.getLogger( QueryRegistry.class );
+import org.neo4j.kernel.guard.Guard;
+import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.server.logging.Logger;
+
+public class QueryRegistryExtension implements Lifecycle
+{
+    public static final Logger log = Logger.getLogger( QueryRegistryExtension.class );
 
     protected final ConcurrentHashMap<String, QueryRegistryEntry> runningQueries = new ConcurrentHashMap<String, QueryRegistryEntry>();
     protected final Guard guard;
 
-    public QueryRegistry(Guard guard) {
-        //this.sessionIdGenerator = sessionIdGenerator
+    public QueryRegistryExtension( Guard guard )
+    {
         this.guard = guard;
     }
 
@@ -50,4 +52,24 @@ public class QueryRegistry {
         return new TreeList(runningQueries.values());
     }
 
+
+    @Override
+    public void init() throws Throwable
+    {
+    }
+
+    @Override
+    public void start() throws Throwable
+    {
+    }
+
+    @Override
+    public void stop() throws Throwable
+    {
+    }
+
+    @Override
+    public void shutdown() throws Throwable
+    {
+    }
 }

@@ -5,7 +5,6 @@ import java.util.Collection;
 import org.apache.commons.configuration.Configuration;
 
 import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.kernel.guard.Guard;
 import org.neo4j.server.AbstractNeoServer;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.plugins.Injectable;
@@ -17,23 +16,21 @@ public class Lifecycle implements SPIPluginLifecycle {
     @Override
     public Collection<Injectable<?>> start(NeoServer neoServer) {
 
-        QueryKillerExtension queryKillerExtension = neoServer.getDatabase().getGraph().getDependencyResolver().resolveDependency(QueryKillerExtension.class);
-
-        final QueryRegistry queryRegistry = queryKillerExtension.getQueryRegistry();
+        final QueryRegistryExtension queryRegistryExtension = neoServer.getDatabase().getGraph().getDependencyResolver().resolveDependency(QueryRegistryExtension.class);
 
         AbstractNeoServer abstractNeoServer = (AbstractNeoServer)neoServer;
-        abstractNeoServer.getWebServer().addFilter(new QueryKillerFilter(queryRegistry), "/cypher"); // "/*" for catch all
+        abstractNeoServer.getWebServer().addFilter(new QueryKillerFilter(queryRegistryExtension), "/cypher"); // "/*" for catch all
 
-        Collection result = singletonList(new Injectable<QueryRegistry>() {
+        Collection result = singletonList(new Injectable<QueryRegistryExtension>() {
 
             @Override
-            public QueryRegistry getValue() {
-                return queryRegistry;
+            public QueryRegistryExtension getValue() {
+                return queryRegistryExtension;
             }
 
             @Override
-            public Class<QueryRegistry> getType() {
-                return QueryRegistry.class;
+            public Class<QueryRegistryExtension> getType() {
+                return QueryRegistryExtension.class;
             }
         });
         return result;

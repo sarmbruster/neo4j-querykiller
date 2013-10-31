@@ -1,1 +1,1 @@
-org.neo4j.extension.querykiller.QueryKillerExtensionFactory
+org.neo4j.extension.querykiller.QueryRegistryExtensionFactory

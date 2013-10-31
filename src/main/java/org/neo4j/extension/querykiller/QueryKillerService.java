@@ -15,18 +15,25 @@ import java.util.Map;
 @Path("/")
 public class QueryKillerService {
 
-    private QueryRegistry queryRegistry;
+    @Context
+    private QueryRegistryExtension queryRegistryExtension;
 
-    public QueryKillerService(@Context QueryRegistry queryRegistry) {
-        this.queryRegistry = queryRegistry;
+    /**
+     * to be used from tests
+     * @param queryRegistryExtension
+     */
+    public void setQueryRegistryExtension( QueryRegistryExtension queryRegistryExtension )
+    {
+        this.queryRegistryExtension = queryRegistryExtension;
     }
 
     @GET
+
     @Produces(MediaType.APPLICATION_JSON)
     public Response activeQueries() throws IOException {
 
         List<Map<String,Object>> result = new ArrayList<>();
-        for (QueryRegistryEntry q : queryRegistry.getRunningQueries()) {
+        for (QueryRegistryEntry q : queryRegistryExtension.getRunningQueries()) {
             Map<String, Object> map = new HashMap<>();
             map.put("cypher", q.getCypher());
             map.put("key", q.getKey());
@@ -42,6 +49,6 @@ public class QueryKillerService {
     @DELETE
     @Path("/{queryKey}")
     public void killQuery(@PathParam("queryKey") String queryKey) {
-        queryRegistry.abortQuery(queryKey);
+        queryRegistryExtension.abortQuery(queryKey);
     }
 }
