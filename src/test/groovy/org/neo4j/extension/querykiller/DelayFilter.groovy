@@ -37,8 +37,10 @@ class DelayFilter implements Filter {
         if (request instanceof HttpServletRequest) {
             def delay = ((HttpServletRequest)request).getHeader("X-Delay")
             if (delay != null) {
+                def finishTime = System.currentTimeMillis() + (delay as long)
                 log.warn "${Thread.currentThread()} sleeping for $delay ms"
-                for (int i=0; i < (delay as int); i++) {
+
+                while (System.currentTimeMillis() < finishTime) {
                     graphDatabaseService.getNodeById(0)
                     sleep 1
                 }
