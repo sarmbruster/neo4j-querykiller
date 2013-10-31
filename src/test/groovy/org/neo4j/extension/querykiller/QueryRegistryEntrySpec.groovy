@@ -43,11 +43,11 @@ class QueryRegistryEntrySpec extends Specification
 
         when: "we need to split the formatted string, first part contains duration in msec"
         def result = queryRegistryEntry.formatAsTable()
-        def timePart = result.substring( 0, 10 )
-        def rest = result.substring( 10 )
+        def timePart = result.substring( 0, 23 )
+        def rest = result.substring( 23 )
 
         then:
-        timePart =~ /|    \d /
+        timePart =~ /|    \d | +\d+ +|/
         rest == resultTail
 
         where:

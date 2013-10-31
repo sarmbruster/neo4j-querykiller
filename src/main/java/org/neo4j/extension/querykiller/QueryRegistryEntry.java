@@ -204,6 +204,12 @@ public class QueryRegistryEntry implements Comparable {
     public String formatAsTable()
     {
         long duration = System.currentTimeMillis() - started.getTime();
-        return String.format( "| %7d | %-60.60s | %-15.15s | %-15.15s |", duration, cypher, remoteHost, endPoint );
+        return String.format( "| %7d | %10s | %-60.60s | %-15.15s | %-15.15s |",
+                duration,
+                getKey(),
+                getCypher(),
+                getRemoteHost(),
+                getEndPoint()
+        );
     }
 }

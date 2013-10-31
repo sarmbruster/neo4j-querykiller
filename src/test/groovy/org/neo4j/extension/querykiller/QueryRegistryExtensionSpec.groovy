@@ -76,4 +76,23 @@ class QueryRegistryExtensionSpec extends Specification
         thrown IllegalArgumentException
 
     }
+
+    def "tabular output matches table structure"() {
+        setup:
+        QueryRegistryExtension queryRegistryExtension = new QueryRegistryExtension( new Guard(null))
+        queryRegistryExtension.registerQuery("cypher1", "endPoint", "127.0.0.1", null)
+        queryRegistryExtension.registerQuery("cypher2", "endPoint", "127.0.0.1", null)
+
+        when:
+        def lines = queryRegistryExtension.formatAsTable().split("\n")
+
+        then:
+        lines.size() == 5
+        lines[0] == "+---------+------------+--------------------------------------------------------------+-----------------+-----------------+"
+        lines[1] == "| time ms | key        | query                                                        | source          | endPoint        |"
+        lines[2] =~ /^\| ....... \| .......... \| cypher1                                                      \| 127\.0\.0\.1       \| endPoint        \|$/
+        lines[3] =~ /^\| ....... \| .......... \| cypher2                                                      \| 127\.0\.0\.1       \| endPoint        \|$/
+        lines[4] == "+---------+------------+--------------------------------------------------------------+-----------------+-----------------+"
+    }
+
 }

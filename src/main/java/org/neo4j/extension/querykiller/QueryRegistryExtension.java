@@ -78,4 +78,17 @@ public class QueryRegistryExtension implements Lifecycle
     public void shutdown() throws Throwable
     {
     }
+
+    public String formatAsTable()
+    {
+        StringBuilder sb = new StringBuilder(  );
+        sb.append(      "+---------+------------+--------------------------------------------------------------+-----------------+-----------------+\n")
+                .append("| time ms | key        | query                                                        | source          | endPoint        |\n");
+        for (QueryRegistryEntry queryRegistryEntry : runningQueries) {
+            sb.append(queryRegistryEntry.formatAsTable()).append("\n");
+        }
+
+        sb.append("+---------+------------+--------------------------------------------------------------+-----------------+-----------------+\n");
+        return sb.toString();
+    }
 }
