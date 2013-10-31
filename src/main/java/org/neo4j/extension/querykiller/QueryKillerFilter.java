@@ -7,9 +7,12 @@ import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
 
 import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
+
+import org.neo4j.extension.querykiller.http.CopyHttpServletRequest;
 
 /**
  * QueryKillerFilter registers a cypher statement with a {@QueryRegistry}
@@ -33,10 +36,12 @@ public class QueryKillerFilter implements Filter {
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
 
-        JsonNode query = objectMapper.readTree( request.getReader() ).get( "query" );
+        HttpServletRequest copyRequest = new CopyHttpServletRequest((HttpServletRequest)request);
+
+        JsonNode query = objectMapper.readTree( copyRequest.getReader() ).get( "query" );
         String queryKey = queryRegistry.registerQuery(query.getTextValue());
         try {
-            chain.doFilter(request, response);
+            chain.doFilter(copyRequest, response);
         } finally {
             queryRegistry.unregisterQuery(queryKey);
         }

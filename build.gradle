@@ -14,6 +14,7 @@ repositories {
 ext {
     neo4jVersion = "1.9.4"
     jerseyVersion = "1.9"
+    neo4jDirectory = "."
 }
 
 version = "1.0.0-SNAPSHOT"
@@ -25,7 +26,6 @@ dependencies {
     compile group: 'org.neo4j', name: 'neo4j-lucene-index', version: neo4jVersion
     compile group: 'org.neo4j', name: 'server-api', version: neo4jVersion
     compile group: 'org.neo4j.app', name: 'neo4j-server', version: neo4jVersion
-    compile 'ch.qos.logback:logback-access:0.9.30'
     testCompile "org.spockframework:spock-core:0.7-groovy-2.0"
     testCompile group: 'org.neo4j', name: 'neo4j-kernel', version: neo4jVersion, classifier: 'tests'
     testCompile group: 'org.neo4j.app', name: 'neo4j-server', version: neo4jVersion, classifier: 'tests'
