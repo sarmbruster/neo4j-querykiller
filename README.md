@@ -41,7 +41,7 @@ Within neo4j-shell a new command is available:
 
 `query`: lists all queries
 
-`query -k <key>`: kills the query identified by <key>.
+`query -k <key>`: kills the query identified by &lt;key&gt;.
 
 An example
 ----------
