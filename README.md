@@ -43,6 +43,21 @@ Within neo4j-shell a new command is available:
 
 `query -k <key>`: kills the query identified by <key>.
 
+An example
+----------
+
+Create long running query:
+
+    curl -X POST -H Accept:application/json -H Content-Type:application/json -d '{"query": "MATCH (a)-[r*]-(c) RETURN a"}' -v  http://localhost:7474/db/data/cypher
+
+Check which queries are running:
+
+    curl http://localhost:7474/querykiller/
+    [{"cypher":"MATCH (a)-[r*]-(c) RETURN a","endPoint":"/cypher","thread":92,"since":3847,"key":"2161824329","remoteUser":null,"remoteHost":"127.0.0.1"}]
+
+Kill the query by using the 'key' value from the previous query:
+
+    curl -X DELETE http://localhost:7474/querykiller/2161824329
 
 Implementation
 --------------
@@ -64,19 +79,3 @@ further ideas
 * expose querykiller as a JMX bean
 * add tests for shell extension
 * better docs
-
-An example
-----------
-
-Create long running query:
-
-    curl -X POST -H Accept:application/json -H Content-Type:application/json -d '{"query": "MATCH (a)-[r*]-(c) RETURN a"}' -v  http://localhost:7474/db/data/cypher
-
-Check which queries are running:
-
-    curl http://localhost:7474/querykiller/
-    [{"cypher":"MATCH (a)-[r*]-(c) RETURN a","endPoint":"/cypher","thread":92,"since":3847,"key":"2161824329","remoteUser":null,"remoteHost":"127.0.0.1"}]
-
-Kill the query by using the 'key' value from the previous query:
-
-    curl -X DELETE http://localhost:7474/querykiller/2161824329
