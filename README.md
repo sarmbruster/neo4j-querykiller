@@ -39,9 +39,9 @@ To terminate a query send a HTTP DELETE to http://localhost:7474/querykiller/<ke
 
 Within neo4j-shell a new command is available:
 
-`query`: lists all queries
+    `query`: lists all queries
 
-`query -k <key>`: kills the query identified by <key>.
+    `query -k <key>`: kills the query identified by <key>.
 
 An example
 ----------
