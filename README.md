@@ -77,6 +77,6 @@ Check which queries are running:
     curl http://localhost:7474/querykiller/
     [{"cypher":"MATCH (a)-[r*]-(c) RETURN a","endPoint":"/cypher","thread":92,"since":3847,"key":"2161824329","remoteUser":null,"remoteHost":"127.0.0.1"}]
 
-Kill the query:
+Kill the query by using the 'key' value from the previous query:
 
     curl -X DELETE http://localhost:7474/querykiller/2161824329
