@@ -10,8 +10,8 @@ Installation
 
 The simple way:
 
-* download Neo4j distribution and extract it
-* call `./gradlew -Pneo4jDirectory=<neo4j-dir> deploy
+    Download Neo4j from the [downloads page](http://www.neo4j.org/download) and extract it
+    ./gradlew -Pneo4jDirectory=<neo4j-dir> deploy
 
 Gradle's deploy target copies the querykiller jar file to your Neo4j folder and sets up the configuration for you. In detail, the following actions are taken:
 * build the jar file for querykiller and copy it to `<neo4j-dir>/plugins`
@@ -63,3 +63,19 @@ further ideas
 * expose querykiller as a JMX bean
 * add tests for shell extension
 * better docs
+
+An example
+----------
+
+Create long running query:
+
+    curl -X POST -H Accept:application/json -H Content-Type:application/json -d '{"query": "MATCH (a)-[r*]-(c) RETURN a"}' -v  http://localhost:7474/db/data/cypher
+
+Check which queries are running:
+
+    curl http://localhost:7474/querykiller/
+    [{"cypher":"MATCH (a)-[r*]-(c) RETURN a","endPoint":"/cypher","thread":92,"since":3847,"key":"2161824329","remoteUser":null,"remoteHost":"127.0.0.1"}]
+
+Kill the query:
+
+    curl -X DELETE http://localhost:7474/querykiller/2161824329
