@@ -10,7 +10,8 @@ Installation
 
 The simple way:
 
-    Download Neo4j from the [downloads page](http://www.neo4j.org/download) and extract it
+Download Neo4j from the [downloads page](http://www.neo4j.org/download) and extract it. Then run the following:
+
     ./gradlew -Pneo4jDirectory=<neo4j-dir> deploy
 
 Gradle's deploy target copies the querykiller jar file to your Neo4j folder and sets up the configuration for you. In detail, the following actions are taken:
