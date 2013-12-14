@@ -1,5 +1,7 @@
 package org.neo4j.extension.querykiller
 
+import groovy.transform.CompileStatic
+import org.neo4j.helpers.Clock
 import org.neo4j.kernel.impl.transaction.xaframework.ForceMode
 import org.neo4j.server.CommunityNeoServer
 import org.neo4j.server.configuration.Configurator
@@ -9,14 +11,15 @@ import org.neo4j.server.configuration.validation.Validator
 import org.neo4j.server.database.CommunityDatabase
 import org.neo4j.server.database.Database
 import org.neo4j.server.database.EphemeralDatabase
-import org.neo4j.server.helpers.ServerBuilder
+import org.neo4j.server.helpers.CommunityServerBuilder
 import org.neo4j.server.preflight.PreFlightTasks
 import org.neo4j.server.rest.paging.LeaseManager
 import org.neo4j.server.rest.web.DatabaseActions
-import org.neo4j.tooling.Clock
-import org.neo4j.tooling.RealClock
 
-class ConfigurableServerBuilder extends ServerBuilder {
+import static org.neo4j.helpers.Clock.SYSTEM_CLOCK
+
+@CompileStatic
+class ConfigurableServerBuilder extends CommunityServerBuilder {
 
     final Map<String,String> config = [:]
 
@@ -25,39 +28,67 @@ class ConfigurableServerBuilder extends ServerBuilder {
         this
     }
 
-    /**
-     * mostly a copy of {@link ServerBuilder#build()} but allowing to tweak graphdb's config by hooking into getDbTuningPropertiesWithServerDefaults
+    @Override
+    File createPropertiesFiles() throws IOException {
+        def file = super.createPropertiesFiles()
+        return file
+    }
+
+/**
+     * mostly a copy of {@link CommunityServerBuilder#build()} but allowing to tweak graphdb's config by hooking into getDbTuningPropertiesWithServerDefaults
      * @return
      * @throws IOException
      */
     @Override
-    CommunityNeoServer build() throws IOException {
+    public CommunityNeoServer build() throws IOException
+    {
+        if ( dbDir == null && persistent )
+        {
+            throw new IllegalStateException( "Must specify path" );
+        }
+        final File configFile = createPropertiesFiles();
 
-        if (preflightTasks == null) {
+        if ( preflightTasks == null )
+        {
             preflightTasks = new PreFlightTasks(null) {
                 @Override
-                public boolean run() {
+                public boolean run()
+                {
                     return true;
                 }
             };
         }
-        File configFile = createPropertiesFiles();
-        return new CommunityNeoServer(new PropertyFileConfigurator(new Validator(new DatabaseLocationMustBeSpecifiedRule()), configFile)) {
 
-            Map graphDbConfig = config
+        return new ConfigurableTestCommunityNeoServer( new PropertyFileConfigurator( new Validator(
+                new DatabaseLocationMustBeSpecifiedRule() ), configFile ), configFile, config );
+    }
 
-            @Override
-            protected PreFlightTasks createPreflightTasks() {
-                return preflightTasks;
-            }
+    /** copied from CommunityServerBuilder
+     * difference is that custom config gets injected into tuning params. As a side effect we can basically inject all parameters from neo4j.properties
+      */
+    @CompileStatic
+    private class ConfigurableTestCommunityNeoServer extends CommunityNeoServer {
+        private final File configFile;
+        private final Map<String, String> graphDbConfig
 
-            @Override
-            protected Database createDatabase() {
-                return persistent ?
+        ConfigurableTestCommunityNeoServer(PropertyFileConfigurator propertyFileConfigurator, File configFile, Map<String,String> config) {
+            super(propertyFileConfigurator);
+            this.configFile = configFile;
+            this.graphDbConfig = config
+        }
+
+        @Override
+        protected PreFlightTasks createPreflightTasks() {
+            return preflightTasks;
+        }
+
+        @Override
+        protected Database createDatabase() {
+            return persistent ?
                     new CommunityDatabase(configurator) {
                         @Override
                         protected Map<String, String> getDbTuningPropertiesWithServerDefaults() {
-                            Map map =super.getDbTuningPropertiesWithServerDefaults()
+                            Map map = super.getDbTuningPropertiesWithServerDefaults()
                             map.putAll(graphDbConfig)
                             map
                         }
@@ -65,28 +96,29 @@ class ConfigurableServerBuilder extends ServerBuilder {
                     new EphemeralDatabase(configurator) {
                         @Override
                         protected Map<String, String> getDbTuningPropertiesWithServerDefaults() {
-                            Map map =super.getDbTuningPropertiesWithServerDefaults()
+                            Map map = super.getDbTuningPropertiesWithServerDefaults()
                             map.putAll(graphDbConfig)
                             map
                         }
                     };
-            }
-
-            @Override
-            protected DatabaseActions createDatabaseActions() {
-                Clock clockToUse = (clock != null) ? clock : new RealClock();
-
-                return new DatabaseActions(
-                        database,
-                        new LeaseManager(clockToUse),
-                        ForceMode.forced,
-                        configurator.configuration().getBoolean(
-                                Configurator.SCRIPT_SANDBOXING_ENABLED_KEY,
-                                Configurator.DEFAULT_SCRIPT_SANDBOXING_ENABLED));
-            }
-
         }
 
-    }
+        @Override
+        protected DatabaseActions createDatabaseActions() {
+            Clock clockToUse = (clock != null) ? clock : SYSTEM_CLOCK;
 
+            return new DatabaseActions(
+                    new LeaseManager(clockToUse),
+                    ForceMode.forced,
+                    configurator.configuration().getBoolean(
+                            Configurator.SCRIPT_SANDBOXING_ENABLED_KEY,
+                            Configurator.DEFAULT_SCRIPT_SANDBOXING_ENABLED as boolean) as boolean, database.getGraph());
+        }
+
+        @Override
+        public void stop() {
+            super.stop();
+            configFile.delete();
+        }
+    }
 }

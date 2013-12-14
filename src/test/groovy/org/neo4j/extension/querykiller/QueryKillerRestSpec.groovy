@@ -47,7 +47,7 @@ class QueryKillerRestSpec extends NeoServerSpecification {
 
         and:
         jsonOut.columns[0] == "c"
-        jsonOut.data[0][0] == 1
+        jsonOut.data[0][0] == 0
 
     }
 
@@ -71,7 +71,7 @@ class QueryKillerRestSpec extends NeoServerSpecification {
 
         and:
         jsonOut.columns[0] == "c"
-        jsonOut.data[0][0] == 1
+        jsonOut.data[0][0] == 0
 
         and:
         duration > delay

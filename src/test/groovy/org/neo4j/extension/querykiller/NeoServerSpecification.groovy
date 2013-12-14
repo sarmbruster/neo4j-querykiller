@@ -15,7 +15,10 @@ abstract class NeoServerSpecification extends Specification {
     @Shared NeoServer server
 
     def setupSpec() {
-        def serverBuilder = new ConfigurableServerBuilder().withConfigProperty("execution_guard_enabled", "true").onPort(37474)
+        def serverBuilder = new ConfigurableServerBuilder()
+                .withConfigProperty("execution_guard_enabled", "true")
+                .withAutoIndexingEnabledForNodes("dummy")
+                .onPort(37474)
 
         thirdPartyJaxRsPackages().each { packageName, mountpoint ->
             serverBuilder.withThirdPartyJaxRsPackage(packageName, mountpoint)

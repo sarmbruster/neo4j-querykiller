@@ -9,13 +9,13 @@ import org.neo4j.shell.OptionDefinition;
 import org.neo4j.shell.OptionValueType;
 import org.neo4j.shell.Output;
 import org.neo4j.shell.Session;
-import org.neo4j.shell.kernel.apps.ReadOnlyGraphDatabaseApp;
+import org.neo4j.shell.kernel.apps.TransactionProvidingApp;
 
 /**
  * shell extension for querykiller
  */
 @Service.Implementation( App.class )
-public class QueryKillerApp extends ReadOnlyGraphDatabaseApp
+public class QueryKillerApp extends TransactionProvidingApp
 {
 
     {

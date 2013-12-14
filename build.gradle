@@ -12,7 +12,8 @@ repositories {
 }
 
 ext {
-    neo4jVersion = "1.9.4"
+    //neo4jVersion = "1.9.4"
+    neo4jVersion = "2.0.0"
     jerseyVersion = "1.9"
 }
 
@@ -20,7 +21,7 @@ version = "1.0.0-SNAPSHOT"
 group="org.neo4j.extension.querykiller"
   
 dependencies {
-    testCompile group: "org.codehaus.groovy", name: "groovy-all", version: "2.1.6"
+    testCompile group: "org.codehaus.groovy", name: "groovy-all", version: "2.2.1"
     compile group: 'org.neo4j', name: 'neo4j-kernel', version: neo4jVersion
     compile group: 'org.neo4j', name: 'neo4j-lucene-index', version: neo4jVersion
     compile group: 'org.neo4j', name: 'server-api', version: neo4jVersion
@@ -34,7 +35,7 @@ dependencies {
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '1.8'
+    gradleVersion = '1.9'
 }
 
  publishing {

@@ -1,6 +1,7 @@
 package org.neo4j.extension.querykiller
 
 import org.neo4j.graphdb.GraphDatabaseService
+import org.neo4j.graphdb.NotFoundException
 import org.neo4j.server.logging.Logger
 
 import javax.servlet.Filter
@@ -34,16 +35,26 @@ class DelayFilter implements Filter {
 
     @Override
     void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) throws IOException, ServletException {
+
         if (request instanceof HttpServletRequest) {
             def delay = ((HttpServletRequest)request).getHeader("X-Delay")
-            if (delay != null) {
-                def finishTime = System.currentTimeMillis() + (delay as long)
-                log.warn "${Thread.currentThread()} sleeping for $delay ms"
+            def tx = graphDatabaseService.beginTx()
+            try {
+                if (delay != null) {
+                    def finishTime = System.currentTimeMillis() + (delay as long)
+                    log.warn "${Thread.currentThread()} sleeping for $delay ms"
 
-                while (System.currentTimeMillis() < finishTime) {
-                    graphDatabaseService.getNodeById(0)
-                    sleep 1
+                    while (System.currentTimeMillis() < finishTime) {
+                        try {
+                            graphDatabaseService.getNodeById(0)
+                        } catch (NotFoundException e) {
+                            // pass
+                        }
+                        sleep 1
+                    }
                 }
+            } finally {
+                tx.close()
             }
         }
         chain.doFilter(request, response)
