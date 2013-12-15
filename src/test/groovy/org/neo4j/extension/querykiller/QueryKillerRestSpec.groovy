@@ -1,77 +1,65 @@
 package org.neo4j.extension.querykiller
 
-import com.sun.jersey.api.client.Client
-import groovy.json.JsonSlurper
-import org.neo4j.server.rest.RestRequest
-import org.neo4j.server.rest.domain.GraphDbHelper
+import com.sun.jersey.api.client.UniformInterfaceException
+import org.junit.ClassRule
+import org.neo4j.extension.spock.Neo4jServerResource
+import org.neo4j.test.server.HTTP
 import spock.lang.Shared
+import spock.lang.Specification
 import spock.lang.Unroll
 
 import javax.ws.rs.core.MediaType
 
-class QueryKillerRestSpec extends NeoServerSpecification {
+class QueryKillerRestSpec extends Specification {
 
-    public static final String MOUNTPOINT = "/querykiller"
-    @Shared Client client = Client.create()
-    @Shared GraphDbHelper helper
-    private RestRequest request
+    public static final String MOUNTPOINT = "querykiller"
 
-    def setupSpec() {
-        assert graphDB
-        this.helper = new GraphDbHelper( server.getDatabase() )
-        //client.addFilter(new LoggingFilter())
-    }
+    @Shared
+    @ClassRule Neo4jServerResource neo4j = new Neo4jServerResource(
+            config: [ execution_guard_enabled: "true" ],
+            thirdPartyJaxRsPackages: [ "org.neo4j.extension.querykiller": "/$MOUNTPOINT" ]
+    )
 
-    @Override
-    Map thirdPartyJaxRsPackages() {
-        ["org.neo4j.extension.querykiller": MOUNTPOINT]
-    }
-
-    def setup() {
-        request = new RestRequest(server.baseUri() /*.resolve(MOUNTPOINT+"/")*/, client)
+    // TODO: refactor to Neo4jServerResponse.http when 0.2 is released
+    def getHttp() {
+        HTTP.withBaseUri(neo4j.baseUrl)
     }
 
     def "send cypher query"() {
-
         when:
-        def jsonIn = """{
-          "query" : "start n=node(*) return count(n) as c",
-          "params" : {
-          }
-        }"""
-        def response = request.post("db/data/cypher", jsonIn)
-        def jsonOut = new JsonSlurper().parseText(response.entity)
+        def json = [
+                query: "MATCH (n) RETURN count(n) AS c",
+        ]
+        def response = http.POST("db/data/cypher", json)
 
         then:
-        response.status == 200
+        response.status() == 200
 
         and:
-        jsonOut.columns[0] == "c"
-        jsonOut.data[0][0] == 0
-
+        response.content().columns[0] == "c"
+        response.content().data[0][0] == 0
     }
 
     def "send cypher query with delay"() {
 
         when:
-        def jsonIn = """{
-          "query" : "start n=node(*) return count(n) as c",
-          "params" : {
-          }
-        }"""
+        def json = [
+                query: "MATCH (n) RETURN count(n) AS c",
+        ]
         def delay = 100
-        request.header("X-Delay", delay as String)
+
         def now = System.currentTimeMillis()
-        def response = request.post("db/data/cypher", jsonIn)
-        def jsonOut = new JsonSlurper().parseText(response.entity)
+        def response = http
+                .withHeaders("X-Delay", delay as String)
+                .POST("db/data/cypher", json)
         def duration = System.currentTimeMillis() - now
 
         then:
-        response.status == 200
+        response.status() == 200
 
         and:
-        jsonOut.columns[0] == "c"
-        jsonOut.data[0][0] == 0
+        response.content().columns[0] == "c"
+        response.content().data[0][0] == 0
 
         and:
         duration > delay
@@ -86,27 +74,24 @@ class QueryKillerRestSpec extends NeoServerSpecification {
         sleep 10  // otherwise cypher requests have not yet arrived
 
         when: "check query list"
-        request.accept(MediaType.APPLICATION_JSON_TYPE)
-        def response = request.get("querykiller")
-        def json = new JsonSlurper().parseText(response.entity)
+        def response = http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
 
         then:
-        response.status == 200
+        response.status() == 200
 
         and:
-        json.size() >= resultRows -1 // 1 off, otherwise test are flacky
+        response.content().size() >= resultRows -1 // 1 off, otherwise test are flacky
 
         when:
         threads.each { it.join() }
         sleep 100
-        response = request.get("querykiller")
-        json = new JsonSlurper().parseText(response.entity)
+        response = http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
 
         then:
-        response.status == 200
+        response.status() == 200
 
         and:
-        json.size()==0
+        response.content().size()==0
 
         cleanup:
         threads.each { it.join() }
@@ -121,45 +106,37 @@ class QueryKillerRestSpec extends NeoServerSpecification {
     }
 
     def "send query with delay and terminate it"() {
-
         setup:
         def threads =  (0..<1).collect { Thread.start runCypherQuery.curry(1000) }
         sleep 100  // otherwise cypher requests have not yet arrived
 
         when: "check query list"
-        request.accept(MediaType.APPLICATION_JSON_TYPE)
-        def response = request.get("querykiller")
-        def json = new JsonSlurper().parseText(response.entity)
+        def response = http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
 
         then:
-        response.status == 200
+        response.status() == 200
 
         and:
-
-        json.size() == 1
-        json[0].cypher == "start n=node(*) return count(n) as c"
-
+        response.content().size() == 1
+        response.content()[0].cypher == "MATCH (n) RETURN count(n) AS c"
 
         when:
-        def key = json[0].key
-        response = request.delete("querykiller/$key")
+        def key = response.content()[0].key
+        http.DELETE("$MOUNTPOINT/$key")
 
-
-        //json = new JsonSlurper().parseText(response.entity)
-
-        then:
-        response.status == 204
+        then: "delete operation returned 204"
+        def e = thrown(UniformInterfaceException) // it's weird but a 204 is wrapped into an exception
+        e.response.status == 204
 
         when: "check query list again"
         sleep 100
-        response = request.get("querykiller")
-        json = new JsonSlurper().parseText(response.entity)
+        response = http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
 
         then:
-        response.status == 200
+        response.status() == 200
 
         and:
-        json.size() == 0
+        response.content().size() == 0
 
         cleanup:
         threads.each { it.join() }
@@ -167,14 +144,9 @@ class QueryKillerRestSpec extends NeoServerSpecification {
     }
 
     Closure runCypherQuery = { delay ->
-        def req = new RestRequest(server.baseUri(), client)
-        def jsonIn = """{
-                      "query" : "start n=node(*) return count(n) as c",
-                      "params" : {
-                      }
-                    }"""
-        req.header("X-Delay", delay as String)
-        req.post("db/data/cypher", jsonIn)
+        http.withHeaders("X-Delay", delay as String).POST("db/data/cypher", [
+                query: "MATCH (n) RETURN count(n) AS c",
+        ])
     }
 
 }

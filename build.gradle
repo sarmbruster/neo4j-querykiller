@@ -9,10 +9,10 @@ apply plugin: 'maven-publish'
 repositories {
     mavenCentral()
     //maven { url "http://m2.neo4j.org/content/repositories/releases/" }
+    maven {url "https://raw.github.com/neo4j-contrib/m2/master/releases" }
 }
 
 ext {
-    //neo4jVersion = "1.9.4"
     neo4jVersion = "2.0.0"
     jerseyVersion = "1.9"
 }
@@ -21,16 +21,11 @@ version = "1.0.0-SNAPSHOT"
 group="org.neo4j.extension.querykiller"
   
 dependencies {
-    testCompile group: "org.codehaus.groovy", name: "groovy-all", version: "2.2.1"
     compile group: 'org.neo4j', name: 'neo4j-kernel', version: neo4jVersion
     compile group: 'org.neo4j', name: 'neo4j-lucene-index', version: neo4jVersion
     compile group: 'org.neo4j', name: 'server-api', version: neo4jVersion
     compile group: 'org.neo4j.app', name: 'neo4j-server', version: neo4jVersion
-    testCompile "org.spockframework:spock-core:0.7-groovy-2.0"
-    testCompile group: 'org.neo4j', name: 'neo4j-kernel', version: neo4jVersion, classifier: 'tests'
-    testCompile group: 'org.neo4j.app', name: 'neo4j-server', version: neo4jVersion, classifier: 'tests'
-    testCompile group: 'com.sun.jersey', name: 'jersey-core', version: jerseyVersion
-    testCompile group: 'com.sun.jersey', name: 'jersey-client', version: jerseyVersion
+    testCompile group: 'org.neo4j.contrib', name: 'neo4j-spock-extension', version: '0.1'
     //testCompile group: 'com.sun.jersey', name: 'jersey-json', version: jerseyVersion  // make sure this jar is copied to neo4j as well
 }
 
@@ -47,7 +42,7 @@ task wrapper(type: Wrapper) {
     repositories {
         maven {
 //            url "file://$buildDir/repo" // change to point to your repo, e.g. http://my.org/repo
-            url 'file:///home/stefan/lib/neo4j/m2/snapshots'  // TODO: externalize this
+            url '../m2/snapshots'  // TODO: externalize this
         }
     }
 }
