@@ -1,31 +1,30 @@
 package org.neo4j.extension.querykiller;
 
-import java.io.IOException;
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-
-import org.codehaus.jackson.JsonNode;
 import org.codehaus.jackson.map.ObjectMapper;
-
 import org.neo4j.extension.querykiller.http.CopyHttpServletRequest;
+
+import javax.servlet.*;
+import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
 
 /**
  * QueryKillerFilter registers a cypher statement with a {@QueryRegistryExtension}
  * N.B.: a {@link CopyHttpServletRequest} is used for processing the filterChain
+ * base class for filtering requests dealing with cypher statements.
+ * Parsing the cypher query from the request is delegated to a derived class.
  */
-public class QueryKillerFilter implements Filter {
+public abstract class QueryKillerFilter implements Filter {
 
-    private QueryRegistryExtension queryRegistryExtension;
+    protected QueryRegistryExtension queryRegistryExtension;
+
     private ObjectMapper objectMapper;
 
-
-    public QueryKillerFilter( QueryRegistryExtension queryRegistryExtension) {
+    public QueryKillerFilter(QueryRegistryExtension queryRegistryExtension) {
         this.queryRegistryExtension = queryRegistryExtension;
+    }
+
+    public ObjectMapper getObjectMapper() {
+        return objectMapper;
     }
 
     @Override
@@ -51,10 +50,7 @@ public class QueryKillerFilter implements Filter {
         }
     }
 
-    private String extractCypherFromRequest( HttpServletRequest copyRequest ) throws IOException
-    {
-        return objectMapper.readTree( copyRequest.getReader() ).get( "query" ).getTextValue();
-    }
+    protected abstract String extractCypherFromRequest(HttpServletRequest copyRequest) throws IOException;
 
     @Override
     public void destroy() {

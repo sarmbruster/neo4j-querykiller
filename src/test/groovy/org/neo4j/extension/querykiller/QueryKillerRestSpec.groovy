@@ -70,7 +70,7 @@ class QueryKillerRestSpec extends Specification {
     def "send query with delay and check if registry handles this correctly"() {
 
         setup:
-        def threads =  (0..<numberOfQueries).collect { Thread.start runCypherQuery.curry(delay) }
+        def threads =  (0..<numberOfQueries).collect { Thread.start runCypherQueryViaLegacyEndpoint.curry(delay) }
         sleep 10  // otherwise cypher requests have not yet arrived
 
         when: "check query list"
@@ -107,7 +107,7 @@ class QueryKillerRestSpec extends Specification {
 
     def "send query with delay and terminate it"() {
         setup:
-        def threads =  (0..<1).collect { Thread.start runCypherQuery.curry(1000) }
+        def threads =  (0..<1).collect { Thread.start runCypherQueryViaLegacyEndpoint.curry(1000) }
         sleep 100  // otherwise cypher requests have not yet arrived
 
         when: "check query list"
@@ -143,10 +143,50 @@ class QueryKillerRestSpec extends Specification {
 
     }
 
-    Closure runCypherQuery = { delay ->
+    Closure runCypherQueryViaLegacyEndpoint = { delay ->
         http.withHeaders("X-Delay", delay as String).POST("db/data/cypher", [
                 query: "MATCH (n) RETURN count(n) AS c",
         ])
+    }
+
+    Closure runCypherQueryViaTransactionalEndpoint = { delay, statements, params=null ->
+        http.withHeaders("X-Delay", delay as String).POST("db/data/transaction/commit", createJsonForTransactionalEndpoint(statements, params))
+    }
+
+    /**
+     * create a collection structure fitting being suitable for json format used for
+     * transactional endpoint
+     * @param statements array holding cypher statements
+     * @param params array holding parameter for statements
+     * @return
+     */
+    def createJsonForTransactionalEndpoint( statements,  params) {
+        if (!params) {
+            params = statements.collect {[:]}
+        }
+        def transposed = [statements, params].transpose()
+        [
+                statements: transposed.collect { [statement: it[0], params: it[1]] }
+        ]
+    }
+
+    def "queries on transactional endpoint are monitored"() {
+        setup:
+        def threads =  (0..<1).collect { Thread.start runCypherQueryViaTransactionalEndpoint.curry(500, ["CREATE (n) return n", "MATCH (n) RETURN count(n) AS c"]) }
+        sleep 300  // otherwise cypher requests have not yet arrived
+
+        when: "check query list"
+        def response = http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
+
+        then:
+        response.status() == 200
+
+        and:
+        response.content().size() == 1
+        response.content()[0].cypher == '["CREATE (n) return n", "MATCH (n) RETURN count(n) AS c"]'
+
+        cleanup:
+        threads.each { it.join() }
     }
 
 }

@@ -9,6 +9,7 @@ import org.neo4j.server.AbstractNeoServer;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.plugins.Injectable;
 import org.neo4j.server.plugins.SPIPluginLifecycle;
+import org.neo4j.server.web.WebServer;
 
 import static java.util.Collections.singletonList;
 
@@ -18,8 +19,12 @@ public class Lifecycle implements SPIPluginLifecycle {
 
         final QueryRegistryExtension queryRegistryExtension = neoServer.getDatabase().getGraph().getDependencyResolver().resolveDependency(QueryRegistryExtension.class);
 
-        AbstractNeoServer abstractNeoServer = (AbstractNeoServer)neoServer;
-        abstractNeoServer.getWebServer().addFilter(new QueryKillerFilter(queryRegistryExtension), "/cypher"); // "/*" for catch all
+        WebServer webServer = ((AbstractNeoServer)neoServer).getWebServer();
+
+        webServer.addFilter(new LegacyCypherQueryKillerFilter(queryRegistryExtension), "/cypher"); // "/*" for catch all
+        TransactionalCypherQueryKillerFilter transactionalCypherQueryKillerFilter = new TransactionalCypherQueryKillerFilter(queryRegistryExtension);
+        webServer.addFilter(transactionalCypherQueryKillerFilter, "/transaction/*"); // "/*" for catch all
+        webServer.addFilter(transactionalCypherQueryKillerFilter, "/transaction"); // "/*" for catch all
 
         Collection result = singletonList(new Injectable<QueryRegistryExtension>() {
 
