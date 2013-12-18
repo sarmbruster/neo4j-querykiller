@@ -3,8 +3,6 @@ neo4j-querykiller
 
 This project's goal is to provide a convenient way to terminate individual cypher queries running on a Neo4j server.
 
-> NB: for now, only the old, non-transactional cypher endpoint is supported.
-
 Installation
 ------------
 
