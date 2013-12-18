@@ -2,7 +2,7 @@ package org.neo4j.extension.querykiller;
 
 import org.neo4j.kernel.guard.Guard;
 
-class VetoGuard implements Guard.GuardInternal {
+public class VetoGuard implements Guard.GuardInternal {
 
     boolean abort = false;
 

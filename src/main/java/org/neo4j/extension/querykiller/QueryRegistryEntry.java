@@ -1,6 +1,5 @@
 package org.neo4j.extension.querykiller;
 
-
 import javax.xml.bind.annotation.*;
 import java.util.Date;
 import java.util.zip.CRC32;

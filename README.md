@@ -77,4 +77,4 @@ further ideas
 * [ ] expose querykiller as a JMX bean
 * [ ] add tests for shell extension
 * [ ] better docs
-* [ ] make tests more robust (use events instead of static waiting pauses)
+* [x] make tests more robust (use events instead of static waiting pauses)
