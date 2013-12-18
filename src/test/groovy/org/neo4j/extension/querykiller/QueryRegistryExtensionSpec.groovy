@@ -87,6 +87,7 @@ class QueryRegistryExtensionSpec extends Specification
         def lines = queryRegistryExtension.formatAsTable().split("\n")
 
         then:
+        queryRegistryExtension.runningQueries.size() == 2
         lines.size() == 5
         lines[0] == "+---------+------------+--------------------------------------------------------------+-----------------+-----------------+"
         lines[1] == "| time ms | key        | query                                                        | source          | endPoint        |"

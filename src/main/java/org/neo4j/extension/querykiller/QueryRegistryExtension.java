@@ -1,15 +1,20 @@
 package org.neo4j.extension.querykiller;
 
+import java.util.Observable;
 import java.util.SortedSet;
 import java.util.concurrent.ConcurrentSkipListSet;
 
+import org.neo4j.extension.querykiller.events.QueryAbortedEvent;
+import org.neo4j.extension.querykiller.events.QueryEvent;
+import org.neo4j.extension.querykiller.events.QueryRegisteredEvent;
+import org.neo4j.extension.querykiller.events.QueryUnregisteredEvent;
 import org.neo4j.kernel.guard.Guard;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.neo4j.server.logging.Logger;
 
-public class QueryRegistryExtension implements Lifecycle
+public class QueryRegistryExtension extends Observable implements Lifecycle
 {
-    public static final Logger log = Logger.getLogger( QueryRegistryExtension.class );
+    public final Logger log = Logger.getLogger( QueryRegistryExtension.class );
 
     protected final ConcurrentSkipListSet<QueryRegistryEntry> runningQueries = new ConcurrentSkipListSet<>();
     protected final Guard guard;
@@ -24,24 +29,32 @@ public class QueryRegistryExtension implements Lifecycle
         VetoGuard vetoGuard = new VetoGuard();
         guard.start(vetoGuard);
 
-        QueryRegistryEntry queryMapEntry = new QueryRegistryEntry(vetoGuard, cypher, endPoint, remoteHost, remoteUser);
-        runningQueries.add( queryMapEntry );
-        log.warn("registered query for key " + queryMapEntry);
-        return queryMapEntry;
+        QueryRegistryEntry queryRegistryEntry = new QueryRegistryEntry(vetoGuard, cypher, endPoint, remoteHost, remoteUser);
+        runningQueries.add( queryRegistryEntry );
+        log.warn("registered query for key " + queryRegistryEntry);
+        forceNotifyObservers( new QueryRegisteredEvent( queryRegistryEntry ) );
+        return queryRegistryEntry;
     }
 
-    public void unregisterQuery( QueryRegistryEntry queryMapEntry) {
+    public void unregisterQuery( QueryRegistryEntry queryRegistryEntry) {
         guard.stop();
-        log.warn("unregistered query for key " + queryMapEntry);
-        runningQueries.remove(queryMapEntry);
+        log.warn("unregistered query for key " + queryRegistryEntry);
+        forceNotifyObservers(new QueryUnregisteredEvent(queryRegistryEntry));
+        runningQueries.remove(queryRegistryEntry);
     }
 
     public QueryRegistryEntry abortQuery(String key) {
         QueryRegistryEntry entry = findQueryRegistryEntryForKey( key );
         entry.getVetoGuard().setAbort(true);
         log.warn("aborted query for key " + key);
-
+        forceNotifyObservers(new QueryAbortedEvent(entry));
         return entry;
+    }
+
+    private void forceNotifyObservers( Object event )
+    {
+        setChanged();
+        notifyObservers( event );
     }
 
     private QueryRegistryEntry findQueryRegistryEntryForKey( String key )
