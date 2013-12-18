@@ -33,7 +33,7 @@ neo4j-querykiller exposes a list of the currently running cypher queries using a
 
 ### killing a query
 
-To terminate a query send a HTTP DELETE to http://localhost:7474/querykiller/<key> where `<key>` is one of the keys from the query list above. If termination is successfull, you'll get back a 204 return status.
+To terminate a query send a HTTP DELETE to http://localhost:7474/querykiller/<key> where `<key>` is one of the keys from the query list above. If termination is successful, you'll get back a 204 return status.
 
 ### shell extension
 
@@ -73,9 +73,10 @@ QueryKillerApp contributes a interface for listing running queries and terminati
 further ideas
 -------------
 
-* gather statistics of queries
-* integration in Neo4j browser
-* support for transactional cypher endpoint
-* expose querykiller as a JMX bean
-* add tests for shell extension
-* better docs
+* [ ] gather statistics of queries
+* [ ] integration in Neo4j browser
+* [x] support for transactional cypher endpoint
+* [ ] expose querykiller as a JMX bean
+* [ ] add tests for shell extension
+* [ ] better docs
+* [ ] make tests more robust (use events instead of static waiting pauses)
