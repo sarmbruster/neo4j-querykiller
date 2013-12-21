@@ -1,7 +1,8 @@
-package org.neo4j.extension.querykiller
+package org.neo4j.extension.querykiller.server
 
 import com.sun.jersey.api.client.UniformInterfaceException
 import org.junit.ClassRule
+import org.neo4j.extension.querykiller.QueryRegistryExtension
 import org.neo4j.extension.querykiller.events.QueryEvent
 import org.neo4j.extension.querykiller.events.QueryRegisteredEvent
 import org.neo4j.extension.querykiller.events.QueryUnregisteredEvent
@@ -20,12 +21,14 @@ class QueryKillerRestSpec extends Specification {
     @Shared
     @ClassRule Neo4jServerResource neo4j = new Neo4jServerResource(
             config: [ execution_guard_enabled: "true" ],
-            thirdPartyJaxRsPackages: [ "org.neo4j.extension.querykiller": "/$MOUNTPOINT" ]
+            thirdPartyJaxRsPackages: [
+                    "org.neo4j.extension.querykiller.server": "/$MOUNTPOINT",
+                    "org.neo4j.extension.querykiller.helper": "/$MOUNTPOINT", // delayFilter
+            ]
     )
 
     Observable observable
     CounterObserver countObserver
-
 
     def setup() {
         observable = neo4j.server.getDatabase().getGraph().getDependencyResolver().resolveDependency(QueryRegistryExtension.class)

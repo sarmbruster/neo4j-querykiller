@@ -1,6 +1,8 @@
-package org.neo4j.extension.querykiller;
+package org.neo4j.extension.querykiller.statistics;
 
 import org.codehaus.jackson.map.ObjectMapper;
+import org.neo4j.extension.querykiller.QueryRegistryEntry;
+import org.neo4j.extension.querykiller.QueryRegistryExtension;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
@@ -13,27 +15,27 @@ import java.util.List;
 import java.util.Map;
 
 @Path("/")
-public class QueryKillerService {
+public class StatisticsService {
 
     @Context
-    private QueryRegistryExtension queryRegistryExtension;
+    private QueryStatisticsExtension queryStatisticsExtension;
 
     /**
      * to be used from tests
-     * @param queryRegistryExtension
+     * @param queryStatisticsExtension
      */
-    public void setQueryRegistryExtension( QueryRegistryExtension queryRegistryExtension )
+    public void setQueryStatisticsExtension(QueryStatisticsExtension queryStatisticsExtension)
     {
-        this.queryRegistryExtension = queryRegistryExtension;
+        this.queryStatisticsExtension = queryStatisticsExtension;
     }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Response activeQueries() throws IOException {
+    public Response statistics() throws IOException {
 
-        long now = System.currentTimeMillis();
+/*        long now = System.currentTimeMillis();
         List<Map<String,Object>> result = new ArrayList<>();
-        for (QueryRegistryEntry q : queryRegistryExtension.getRunningQueries()) {
+        for (QueryRegistryEntry q : queryStatisticsExtension.getRunningQueries()) {
             Map<String, Object> map = new HashMap<>();
             map.put("cypher", q.getCypher());
             map.put("key", q.getKey());
@@ -43,15 +45,17 @@ public class QueryKillerService {
             map.put("remoteUser", q.getRemoteUser());
             map.put("endPoint", q.getEndPoint());
             result.add(map);
-        }
+        }*/
 
         ObjectMapper objectMapper = new ObjectMapper();
-        return Response.ok().entity(objectMapper.writeValueAsString(result)).build();
+        return Response.ok().entity(objectMapper.writeValueAsString(queryStatisticsExtension.getSortedStatistics())).build();
     }
 
+/*
     @DELETE
     @Path("/{queryKey}")
     public void killQuery(@PathParam("queryKey") String queryKey) {
-        queryRegistryExtension.abortQuery(queryKey);
+        queryStatisticsExtension.abortQuery(queryKey);
     }
+*/
 }

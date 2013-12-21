@@ -1,4 +1,4 @@
-package org.neo4j.extension.querykiller
+package org.neo4j.extension.querykiller.helper
 
 import org.neo4j.graphdb.GraphDatabaseService
 import org.neo4j.graphdb.NotFoundException

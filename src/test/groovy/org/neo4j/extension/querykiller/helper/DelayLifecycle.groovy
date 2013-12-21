@@ -1,4 +1,4 @@
-package org.neo4j.extension.querykiller
+package org.neo4j.extension.querykiller.helper
 
 import org.apache.commons.configuration.Configuration
 import org.neo4j.graphdb.GraphDatabaseService

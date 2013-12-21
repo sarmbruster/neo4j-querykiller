@@ -1,1 +1,2 @@
-org.neo4j.extension.querykiller.Lifecycle
+org.neo4j.extension.querykiller.server.QueryKillerLifecycle
+org.neo4j.extension.querykiller.statistics.StatisticsLifecylce

@@ -1,6 +1,8 @@
-package org.neo4j.extension.querykiller;
+package org.neo4j.extension.querykiller.filter;
 
 import org.codehaus.jackson.map.ObjectMapper;
+import org.neo4j.extension.querykiller.QueryRegistryEntry;
+import org.neo4j.extension.querykiller.QueryRegistryExtension;
 import org.neo4j.extension.querykiller.http.CopyHttpServletRequest;
 
 import javax.servlet.*;

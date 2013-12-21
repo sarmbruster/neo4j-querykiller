@@ -1,18 +1,9 @@
-package org.neo4j.extension.querykiller;
+package org.neo4j.extension.querykiller.filter;
 
 import java.io.IOException;
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 
-import org.codehaus.jackson.JsonNode;
-import org.codehaus.jackson.map.ObjectMapper;
-
-import org.neo4j.extension.querykiller.http.CopyHttpServletRequest;
+import org.neo4j.extension.querykiller.QueryRegistryExtension;
 
 /**
  * parses the cypher statement from a call to the legacy cypher endpoint

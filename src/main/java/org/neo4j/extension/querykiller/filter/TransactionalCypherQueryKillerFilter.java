@@ -1,6 +1,7 @@
-package org.neo4j.extension.querykiller;
+package org.neo4j.extension.querykiller.filter;
 
 import org.codehaus.jackson.JsonNode;
+import org.neo4j.extension.querykiller.QueryRegistryExtension;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
