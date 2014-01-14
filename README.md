@@ -2,6 +2,14 @@ neo4j-querykiller
 =================
 
 This project's goal is to provide a convenient way to terminate individual cypher queries running on a Neo4j server.
+It is delivered in two subprojects:
+
+1. community
+Licensed GPL
+
+
+1. enterprise
+Licensed AGPL
 
 Installation
 ------------
