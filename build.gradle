@@ -13,6 +13,7 @@ subprojects{
         jerseyVersion = "1.9"
     }
 
+    archivesBaseName = "neo4j-querykiller-$project.name"
 
     version = "1.0.0-SNAPSHOT"
     group="org.neo4j.extension.querykiller"
@@ -20,7 +21,7 @@ subprojects{
     repositories {
         mavenCentral()
         //maven { url "http://m2.neo4j.org/content/repositories/releases/" }
-        maven {url "https://raw.github.com/neo4j-contrib/m2/master/releases" }
+//        maven {url "https://raw.github.com/neo4j-contrib/m2/master/releases" }
     }
 
     dependencies {
@@ -47,50 +48,3 @@ subprojects{
    }
 
 }
-
-//task wrapper(type: Wrapper) {
-//    gradleVersion = '1.9'
-//}
-
-
-/*task checkNeo4jDirectory << {
-    println "Build $buildDir"
-    assert project.hasProperty("neo4jDirectory"), "use -Pneo4jDirectory=<neo4j directory> to specify target location"
-}
-
-task deployJar(type: Copy, dependsOn: [checkNeo4jDirectory, 'jar']) {
-    // TODO: consider copying dependencies as well
-    from jar // refering to output of jar task here
-    into "$neo4jDirectory/plugins"
-}
-
-task deployConfig(dependsOn: "checkNeo4jDirectory") << {
-    File configFile = file( "$neo4jDirectory/conf/neo4j-server.properties" )
-    assert configFile.exists()
-
-    Properties props = new Properties()
-    props.load( configFile.newInputStream() )
-
-    if ( !props.get( "org.neo4j.server.thirdparty_jaxrs_classes" ) )  {
-        configFile.append( "# auto-added from querykiller's gradle build\n")
-        configFile.append("org.neo4j.server.thirdparty_jaxrs_classes=org.neo4j.extension.querykiller=/querykiller\n" )
-
-    } // TODO: consider amending existing thridparty_jaxrs_classes
-
-    configFile = file( "$neo4jDirectory/conf/neo4j.properties" )
-    assert configFile.exists()
-
-    props = new Properties()
-    props.load( configFile.newInputStream() )
-
-    if ( !props.get( "execution_guard_enabled" ) )  {
-        configFile.append( "# auto-added from querykiller's gradle build\n")
-        configFile.append("execution_guard_enabled=true\n" )
-
-    } // TODO: consider amending existing thridparty_jaxrs_classes
-
-}
-
-task deploy(dependsOn: [deployJar, deployConfig]) << {
-}
-*/

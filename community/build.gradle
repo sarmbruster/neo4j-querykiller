@@ -1,0 +1,50 @@
+def neo4jExpandedDirectory
+
+task checkNeo4jDirectory << {
+    assert project.hasProperty("neo4jDirectory"), "use -Pneo4jDirectory=<neo4j directory> to specify target location"
+
+    neo4jExpandedDirectory = neo4jDirectory.replace("~", System.env.HOME)
+    println "HURZ 1: $neo4jExpandedDirectory"
+
+    def d = file(neo4jExpandedDirectory)
+    assert d.exists(), "-Pneo4jDirectory set to non existent file"
+    assert d.directory, "-Pneo4jDirectory not set to directory"
+
+}
+
+task deployJar(type: Copy, dependsOn: [checkNeo4jDirectory, 'jar']) << {
+    // TODO: consider copying dependencies as well
+    println "HURZ 2: $neo4jExpandedDirectory"
+    from jar // refering to output of jar task here
+    into "$neo4jExpandedDirectory/plugins"
+}
+
+task deployConfig(dependsOn: "checkNeo4jDirectory") << {
+    File configFile = file( "$neo4jExpandedDirectory/conf/neo4j-server.properties" )
+    assert configFile.exists()
+
+    Properties props = new Properties()
+    props.load( configFile.newInputStream() )
+
+    if ( !props.get( "org.neo4j.server.thirdparty_jaxrs_classes" ) )  {
+        configFile.append( "# auto-added from querykiller's gradle build\n")
+        configFile.append("org.neo4j.server.thirdparty_jaxrs_classes=org.neo4j.extension.querykiller.server=/querykiller\n" )
+
+    } // TODO: consider amending existing thridparty_jaxrs_classes
+
+    configFile = file( "$neo4jExpandedDirectory/conf/neo4j.properties" )
+    assert configFile.exists()
+
+    props = new Properties()
+    props.load( configFile.newInputStream() )
+
+    if ( !props.get( "execution_guard_enabled" ) )  {
+        configFile.append( "# auto-added from querykiller's gradle build\n")
+        configFile.append("execution_guard_enabled=true\n" )
+
+    } // TODO: consider amending existing thridparty_jaxrs_classes
+
+}
+
+task deploy(dependsOn: [deployJar, deployConfig]) << {
+}
