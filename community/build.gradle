@@ -4,7 +4,6 @@ task checkNeo4jDirectory << {
     assert project.hasProperty("neo4jDirectory"), "use -Pneo4jDirectory=<neo4j directory> to specify target location"
 
     neo4jExpandedDirectory = neo4jDirectory.replace("~", System.env.HOME)
-    println "HURZ 1: $neo4jExpandedDirectory"
 
     def d = file(neo4jExpandedDirectory)
     assert d.exists(), "-Pneo4jDirectory set to non existent file"
@@ -14,7 +13,6 @@ task checkNeo4jDirectory << {
 
 task deployJar(type: Copy, dependsOn: [checkNeo4jDirectory, 'jar']) << {
     // TODO: consider copying dependencies as well
-    println "HURZ 2: $neo4jExpandedDirectory"
     from jar // refering to output of jar task here
     into "$neo4jExpandedDirectory/plugins"
 }
