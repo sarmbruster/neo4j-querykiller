@@ -26,7 +26,7 @@ class QueryRegistryExtensionSpec extends Specification
         queryRegistryExtension.unregisterQuery(new QueryRegistryEntry())
 
         then:
-        notThrown Exception
+        thrown IllegalArgumentException
 
         when:
         queryRegistryExtension.unregisterQuery(q1)
@@ -38,6 +38,9 @@ class QueryRegistryExtensionSpec extends Specification
         queryRegistryExtension.unregisterQuery(q1)
 
         then:
+        thrown IllegalArgumentException
+
+        and:
         queryRegistryExtension.runningQueries.size() == 1
 
         when:
@@ -53,8 +56,8 @@ class QueryRegistryExtensionSpec extends Specification
         QueryRegistryExtension queryRegistryExtension = new QueryRegistryExtension( new Guard(null))
 
         when:
-        def q1 = queryRegistryExtension.registerQuery("cypher1", "endPoint", "127.0.0.1", null)
-        def q2 = queryRegistryExtension.registerQuery("cypher2", "endPoint", "127.0.0.1", null)
+        def q1 = queryRegistryExtension.registerQuery("cypher1-t", "endPoint", "127.0.0.1", null)
+        def q2 = queryRegistryExtension.registerQuery("cypher2-t", "endPoint", "127.0.0.1", null)
 
         then: "guards are not triggered"
         q1.getVetoGuard().abort == false
@@ -74,12 +77,12 @@ class QueryRegistryExtensionSpec extends Specification
 
         then:
         thrown IllegalArgumentException
-
     }
 
     def "tabular output matches table structure"() {
         setup:
         QueryRegistryExtension queryRegistryExtension = new QueryRegistryExtension( new Guard(null))
+        assert queryRegistryExtension.runningQueries.size() == 0
         queryRegistryExtension.registerQuery("cypher1", "endPoint", "127.0.0.1", null)
         queryRegistryExtension.registerQuery("cypher2", "endPoint", "127.0.0.1", null)
 
@@ -89,11 +92,11 @@ class QueryRegistryExtensionSpec extends Specification
         then:
         queryRegistryExtension.runningQueries.size() == 2
         lines.size() == 5
-        lines[0] == "+---------+------------+--------------------------------------------------------------+-----------------+-----------------+"
-        lines[1] == "| time ms | key        | query                                                        | source          | endPoint        |"
-        lines[2] =~ /^\| ....... \| .......... \| cypher1                                                      \| 127\.0\.0\.1       \| endPoint        \|$/
-        lines[3] =~ /^\| ....... \| .......... \| cypher2                                                      \| 127\.0\.0\.1       \| endPoint        \|$/
-        lines[4] == "+---------+------------+--------------------------------------------------------------+-----------------+-----------------+"
+        lines[0] == "+---------+----------+--------------------------------------------------------------+-----------------+-----------------+"
+        lines[1] == "| time ms | key      | query                                                        | source          | endPoint        |"
+        lines[2] =~ /^\| ....... \| \w{8} \| cypher1                                                      \| 127\.0\.0\.1       \| endPoint        \|$/
+        lines[3] =~ /^\| ....... \| \w{8} \| cypher2                                                      \| 127\.0\.0\.1       \| endPoint        \|$/
+        lines[4] == "+---------+----------+--------------------------------------------------------------+-----------------+-----------------+"
     }
 
 }
