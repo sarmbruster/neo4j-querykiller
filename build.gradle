@@ -1,27 +1,30 @@
-subprojects{
+allprojects { 
+    apply plugin: "idea"
+    idea {
+      project {
+        ext.jdkName = '1.7'
+        ext.languageLevel = '1.7'
+      }
+    }}
 
+subprojects {
     apply plugin: "java"
     apply plugin: "groovy"
-    apply plugin: 'idea'
     apply plugin: 'maven-publish'
 
 //sourceCompatibility=JavaVersion.VERSION_1_7
 //targetCompatibility=JavaVersion.VERSION_1_7
 
-    ext {
-        neo4jVersion = "2.0.0"
-        jerseyVersion = "1.9"
-    }
-
-    archivesBaseName = "neo4j-querykiller-$project.name"
-
-    version = "1.0.0-SNAPSHOT"
-    group="org.neo4j.extension.querykiller"
-
     repositories {
         mavenCentral()
         //maven { url "http://m2.neo4j.org/content/repositories/releases/" }
-//        maven {url "https://raw.github.com/neo4j-contrib/m2/master/releases" }
+        maven {url "https://raw.github.com/neo4j-contrib/m2/master/releases" }
+        //mavenLocal()
+    }
+
+    ext {
+        neo4jVersion = "2.0.0"
+        jerseyVersion = "1.9"
     }
 
     dependencies {
@@ -29,9 +32,15 @@ subprojects{
         compile group: 'org.neo4j', name: 'neo4j-lucene-index', version: neo4jVersion
         compile group: 'org.neo4j', name: 'server-api', version: neo4jVersion
         compile group: 'org.neo4j.app', name: 'neo4j-server', version: neo4jVersion
-        testCompile group: 'org.neo4j.contrib', name: 'neo4j-spock-extension', version: '0.1'
+        testCompile group: 'org.neo4j.contrib', name: 'neo4j-spock-extension', version: '0.2'
         //testCompile group: 'com.sun.jersey', name: 'jersey-json', version: jerseyVersion  // make sure this jar is copied to neo4j as well
     }
+
+    archivesBaseName = "neo4j-querykiller-$project.name"
+
+    version = "1.0.0-SNAPSHOT"
+    group="org.neo4j.extension.querykiller"
+
 
     publishing {
        publications {

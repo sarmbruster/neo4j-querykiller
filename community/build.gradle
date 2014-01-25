@@ -13,7 +13,7 @@ task checkNeo4jDirectory << {
 
 task deployJar(type: Copy, dependsOn: [checkNeo4jDirectory, 'jar']) << {
     // TODO: consider copying dependencies as well
-    from jar // refering to output of jar task here
+    from jar.archivePath.absolutePath // refering to output of jar task here
     into "$neo4jExpandedDirectory/plugins"
 }
 
