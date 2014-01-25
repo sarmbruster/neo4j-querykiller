@@ -1,9 +1,10 @@
 package org.neo4j.extension.querykiller.server
 
 import com.sun.jersey.api.client.UniformInterfaceException
+import groovy.util.logging.Slf4j
 import org.junit.ClassRule
 import org.neo4j.extension.querykiller.QueryRegistryExtension
-import org.neo4j.extension.querykiller.events.QueryEvent
+import org.neo4j.extension.querykiller.events.QueryAbortedEvent
 import org.neo4j.extension.querykiller.events.QueryRegisteredEvent
 import org.neo4j.extension.querykiller.events.QueryUnregisteredEvent
 import org.neo4j.extension.spock.Neo4jServerResource
@@ -13,7 +14,9 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 import javax.ws.rs.core.MediaType
+import java.util.concurrent.TimeoutException
 
+@Slf4j
 class QueryKillerRestSpec extends Specification {
 
     public static final String MOUNTPOINT = "querykiller"
@@ -23,7 +26,7 @@ class QueryKillerRestSpec extends Specification {
             config: [ execution_guard_enabled: "true" ],
             thirdPartyJaxRsPackages: [
                     "org.neo4j.extension.querykiller.server": "/$MOUNTPOINT",
-                    "org.neo4j.extension.querykiller.helper": "/$MOUNTPOINT", // delayFilter
+                    "org.neo4j.extension.querykiller.helper": "/$MOUNTPOINT",
             ]
     )
 
@@ -37,7 +40,7 @@ class QueryKillerRestSpec extends Specification {
     }
 
     def cleanup() {
-        observable.deleteObservers()
+        observable.deleteObserver(countObserver)
     }
 
     // TODO: refactor to Neo4jServerResponse.http when 0.2 is released
@@ -58,6 +61,9 @@ class QueryKillerRestSpec extends Specification {
         and:
         response.content().columns[0] == "c"
         response.content().data[0][0] == 0
+
+        cleanup:
+        sleepUntil { countObserver.counters[QueryUnregisteredEvent.class] == 1}
     }
 
     def "send cypher query with delay"() {
@@ -84,12 +90,17 @@ class QueryKillerRestSpec extends Specification {
         and:
         duration > delay
 
+        cleanup:
+        sleepUntil { countObserver.counters[QueryUnregisteredEvent.class] == 1}
+
     }
 
     @Unroll
     def "send #numberOfQueries queries in parallel with delay #delay [ms] and check if registry handles this correctly"() {
 
         setup:
+        log.error "running with $numberOfQueries"
+        assert countObserver.counters.every { it.value == 0 }
         def threads =  (0..<numberOfQueries).collect { Thread.start runCypherQueryViaLegacyEndpoint.curry(delay) }
         sleepUntil { countObserver.counters[QueryRegisteredEvent.class] == numberOfQueries}
 
@@ -104,7 +115,6 @@ class QueryKillerRestSpec extends Specification {
         response.content().size() <= numberOfQueries
 
         when:
-        threads.each { it.join() }
         sleepUntil { countObserver.counters[QueryUnregisteredEvent.class] == numberOfQueries}
 
         response = http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
@@ -126,18 +136,25 @@ class QueryKillerRestSpec extends Specification {
         4               | 50
         8               | 50
         100             | 50
+        1000            | 50
     }
 
     def "send query with delay and terminate it"() {
         setup:
-        def threads =  (0..<1).collect { Thread.start runCypherQueryViaLegacyEndpoint.curry(1000) }
-        sleep 100  // otherwise cypher requests have not yet arrived
+        assert countObserver.counters.every { it.value == 0 }
+        def now = System.currentTimeMillis()
+        def delay = 5000
+        def threads =  (0..<1).collect { Thread.start runCypherQueryViaLegacyEndpoint.curry(delay) }
+        sleepUntil { countObserver.counters[QueryRegisteredEvent.class] == 1}
 
         when: "check query list"
         def response = http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
 
         then:
         response.status() == 200
+
+        and:
+        countObserver.counters[QueryUnregisteredEvent.class] == 0
 
         and:
         response.content().size() == 1
@@ -152,7 +169,9 @@ class QueryKillerRestSpec extends Specification {
         e.response.status == 204
 
         when: "check query list again"
-        sleep 100
+        sleepUntil { (countObserver.counters[QueryAbortedEvent.class] == 1) &&
+             (countObserver.counters[QueryUnregisteredEvent.class] == 1)
+        }
         response = http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
 
         then:
@@ -161,36 +180,11 @@ class QueryKillerRestSpec extends Specification {
         and:
         response.content().size() == 0
 
+        and: "delay did not time out since we've aborted the query"
+        System.currentTimeMillis() - now < delay
+
         cleanup:
         threads.each { it.join() }
-
-    }
-
-    Closure runCypherQueryViaLegacyEndpoint = { delay ->
-        http.withHeaders("X-Delay", delay as String).POST("db/data/cypher", [
-                query: "MATCH (n) RETURN count(n) AS c",
-        ])
-    }
-
-    Closure runCypherQueryViaTransactionalEndpoint = { delay, statements, params=null ->
-        http.withHeaders("X-Delay", delay as String).POST("db/data/transaction/commit", createJsonForTransactionalEndpoint(statements, params))
-    }
-
-    /**
-     * create a collection structure fitting being suitable for json format used for
-     * transactional endpoint
-     * @param statements array holding cypher statements
-     * @param params array holding parameter for statements
-     * @return
-     */
-    def createJsonForTransactionalEndpoint( statements,  params) {
-        if (!params) {
-            params = statements.collect {[:]}
-        }
-        def transposed = [statements, params].transpose()
-        [
-                statements: transposed.collect { [statement: it[0], params: it[1]] }
-        ]
     }
 
     def "queries on transactional endpoint are monitored"() {
@@ -199,7 +193,13 @@ class QueryKillerRestSpec extends Specification {
         def numberOfQueries = 1
         def threads =  (0..<numberOfQueries).collect { Thread.start runCypherQueryViaTransactionalEndpoint.curry(20, ["CREATE (n) return n", "MATCH (n) RETURN count(n) AS c"]) }
 
-        sleepUntil { countObserver.counters[QueryRegisteredEvent.class] == numberOfQueries}
+        try {
+            sleepUntil { countObserver.counters[QueryRegisteredEvent.class] == numberOfQueries}
+        } catch (TimeoutException e) {
+            log.error "counters: $countObserver.counters"
+            throw e
+        }
+
 
         when: "check query list"
         def response = http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
@@ -215,23 +215,54 @@ class QueryKillerRestSpec extends Specification {
         threads.each { it.join() }
     }
 
+    Closure runCypherQueryViaLegacyEndpoint = { delay ->
+         http.withHeaders("X-Delay", delay as String).POST("db/data/cypher", [
+                 query: "MATCH (n) RETURN count(n) AS c",
+         ])
+     }
+
+     Closure runCypherQueryViaTransactionalEndpoint = { delay, statements, params=null ->
+         http.withHeaders("X-Delay", delay as String).POST("db/data/transaction/commit", createJsonForTransactionalEndpoint(statements, params))
+     }
+
+     /**
+      * create a collection structure fitting being suitable for json format used for
+      * transactional endpoint
+      * @param statements array holding cypher statements
+      * @param params array holding parameter for statements
+      * @return
+      */
+     def createJsonForTransactionalEndpoint( statements,  params) {
+         if (!params) {
+             params = statements.collect {[:]}
+         }
+         def transposed = [statements, params].transpose()
+         [
+                 statements: transposed.collect { [statement: it[0], params: it[1]] }
+         ]
+     }
+
     private void sleepUntil(Closure closure) {
         long started = System.currentTimeMillis()
         while (closure.call() == false) {
             sleep 5;
             if ((System.currentTimeMillis()-started) > 10*1000) {
-                break
+                log.error("timeout in sleepUntil")
+                throw new TimeoutException("timeout in sleepUntil")
             }
         }
-
     }
 
+    @Slf4j
     class CounterObserver implements Observer {
         def counters = [:].withDefault { 0 }
         @Override
         void update( Observable obs, Object o )
         {
-            counters[o.class]++
+            synchronized (o.class) {  // this get concurrently called from different threads -> synchronized is crucial
+                counters[o.class]++
+                log.info("incrementing for ${o.class}: ${counters[o.class]}")
+            }
         }
     }
 }
