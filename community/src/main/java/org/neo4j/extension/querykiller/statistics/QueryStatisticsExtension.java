@@ -3,13 +3,14 @@ package org.neo4j.extension.querykiller.statistics;
 import org.neo4j.extension.querykiller.QueryRegistryEntry;
 import org.neo4j.extension.querykiller.events.QueryUnregisteredEvent;
 import org.neo4j.kernel.lifecycle.Lifecycle;
-import org.neo4j.server.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
 public class QueryStatisticsExtension implements Lifecycle, Observer
 {
-    public final Logger log = Logger.getLogger( QueryStatisticsExtension.class );
+    public final Logger log = LoggerFactory.getLogger(QueryStatisticsExtension.class);
 
     protected final Map<String, QueryStat> statistics = new HashMap<>();
 

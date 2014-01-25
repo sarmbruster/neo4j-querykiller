@@ -3,6 +3,8 @@ package org.neo4j.extension.querykiller.server;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.neo4j.extension.querykiller.QueryRegistryEntry;
 import org.neo4j.extension.querykiller.QueryRegistryExtension;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
@@ -16,6 +18,9 @@ import java.util.Map;
 
 @Path("/")
 public class QueryKillerService {
+
+    public final Logger log = LoggerFactory.getLogger(QueryKillerService.class);
+
 
     @Context
     private QueryRegistryExtension queryRegistryExtension;

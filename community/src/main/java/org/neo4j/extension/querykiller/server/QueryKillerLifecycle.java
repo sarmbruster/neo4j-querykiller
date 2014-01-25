@@ -6,10 +6,14 @@ import org.neo4j.extension.querykiller.filter.TransactionalCypherQueryKillerFilt
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.web.WebServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
 
 public class QueryKillerLifecycle extends DepenceyResolverAwareLifecycle {
+
+    public final Logger log = LoggerFactory.getLogger(QueryKillerLifecycle.class);
 
     @Override
     protected Iterable<? extends Class> dependenciesToInject() {
@@ -18,6 +22,7 @@ public class QueryKillerLifecycle extends DepenceyResolverAwareLifecycle {
 
     @Override
     protected void start(NeoServer neoServer, DependencyResolver dependencyResolver, WebServer webServer) {
+        log.info("registering filters");
         final QueryRegistryExtension queryRegistryExtension = dependencyResolver.resolveDependency(QueryRegistryExtension.class);
         webServer.addFilter(new LegacyCypherQueryKillerFilter(queryRegistryExtension), "/cypher"); // "/*" for catch all
         TransactionalCypherQueryKillerFilter transactionalCypherQueryKillerFilter = new TransactionalCypherQueryKillerFilter(queryRegistryExtension);
