@@ -1,8 +1,10 @@
 package org.neo4j.extension.querykiller;
 
 import javax.xml.bind.annotation.*;
+import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Date;
-import java.util.zip.CRC32;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.PUBLIC_MEMBER)
@@ -108,18 +110,34 @@ public class QueryRegistryEntry implements Comparable {
 
 
     private String calculateKey() {
-        // TODO: find better key, e.g. md5
-        CRC32 crc = new CRC32();
-        crc.update( (int) thread );
-        crc.update( (int) started.getTime() );
-
-        //StringBuilder sb = new StringBuilder().append( thread ).append("_").append(started.getTime());
-        return Long.toString( crc.getValue() );
+        try {
+            MessageDigest md5 = MessageDigest.getInstance("SHA-1");
+            String toDigest = String.format("%d, %d, %s", thread, started.getTime(), getCypher());
+            md5.update(toDigest.getBytes());
+            return new HexBinaryAdapter().marshal(md5.digest());
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     public int compareTo(Object o) {
-        return started.compareTo(((QueryRegistryEntry) o).started);
+        if ( this==o) {
+            return 0;
+        }
+
+        if (!(o instanceof QueryRegistryEntry)) {
+            throw new IllegalStateException("cannot compare QueryRegistryEntry to " + o.getClass().getName());
+        }
+        QueryRegistryEntry other = (QueryRegistryEntry) o;
+
+        int result = started.compareTo(other.started);
+        if (result != 0 ) return result;
+
+        result = cypher.compareTo(other.cypher);
+        if (result != 0 ) return result;
+
+        return getKey().compareTo(other.getKey());
     }
 
     @Override
@@ -203,9 +221,9 @@ public class QueryRegistryEntry implements Comparable {
     public String formatAsTable()
     {
         long duration = System.currentTimeMillis() - started.getTime();
-        return String.format( "| %7d | %10s | %-60.60s | %-15.15s | %-15.15s |",
+        return String.format( "| %7d | %8s | %-60.60s | %-15.15s | %-15.15s |",
                 duration,
-                getKey(),
+                getKey().substring(0,8),
                 getCypher(),
                 getRemoteHost(),
                 getEndPoint()
