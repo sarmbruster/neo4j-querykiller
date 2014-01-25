@@ -1,15 +1,10 @@
 package org.neo4j.extension.querykiller.helper
 
+import groovy.util.logging.Slf4j
 import org.neo4j.graphdb.GraphDatabaseService
 import org.neo4j.graphdb.NotFoundException
-import org.neo4j.server.logging.Logger
 
-import javax.servlet.Filter
-import javax.servlet.FilterChain
-import javax.servlet.FilterConfig
-import javax.servlet.ServletException
-import javax.servlet.ServletRequest
-import javax.servlet.ServletResponse
+import javax.servlet.*
 import javax.servlet.http.HttpServletRequest
 
 /**
@@ -18,9 +13,9 @@ import javax.servlet.http.HttpServletRequest
  * this is useful to fake long running queries
  */
 
-class DelayFilter implements Filter {
 
-    public static final Logger log = Logger.getLogger( DelayFilter.class );
+@Slf4j
+class DelayFilter implements Filter {
 
     private GraphDatabaseService graphDatabaseService
 
@@ -38,11 +33,12 @@ class DelayFilter implements Filter {
 
         if (request instanceof HttpServletRequest) {
             def delay = ((HttpServletRequest)request).getHeader("X-Delay")
-            def tx = graphDatabaseService.beginTx()
-            try {
-                if (delay != null) {
+            if (delay != null) {
+
+                def tx = graphDatabaseService.beginTx()
+                try {
                     def finishTime = System.currentTimeMillis() + (delay as long)
-                    log.warn "${Thread.currentThread()} sleeping for $delay ms"
+                    log.debug "sleeping for $delay ms"
 
                     while (System.currentTimeMillis() < finishTime) {
                         try {
@@ -51,10 +47,12 @@ class DelayFilter implements Filter {
                             // pass
                         }
                         sleep 1
+                        log.trace "waited 1ms"
                     }
+                    log.debug "sleeping for $delay ms DONE"
+                } finally {
+                    tx.close()
                 }
-            } finally {
-                tx.close()
             }
         }
         chain.doFilter(request, response)
