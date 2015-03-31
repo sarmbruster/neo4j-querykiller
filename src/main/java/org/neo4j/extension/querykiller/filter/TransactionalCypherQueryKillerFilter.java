@@ -2,6 +2,7 @@ package org.neo4j.extension.querykiller.filter;
 
 import org.codehaus.jackson.JsonNode;
 import org.neo4j.extension.querykiller.QueryRegistryExtension;
+import org.neo4j.graphdb.GraphDatabaseService;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
@@ -12,8 +13,9 @@ import java.util.List;
  */
 public class TransactionalCypherQueryKillerFilter extends QueryKillerFilter {
 
-    public TransactionalCypherQueryKillerFilter(QueryRegistryExtension queryRegistryExtension) {
-        super(queryRegistryExtension);
+    public TransactionalCypherQueryKillerFilter(QueryRegistryExtension queryRegistryExtension,
+                                                GraphDatabaseService graphDatabaseService) {
+        super(queryRegistryExtension, graphDatabaseService);
     }
 
     @Override

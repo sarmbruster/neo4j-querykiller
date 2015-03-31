@@ -19,7 +19,7 @@ class QueryRegistryEntrySpec extends Specification
         def sw = new StringWriter()
 
         when:
-        QueryRegistryEntry entry = new QueryRegistryEntry( "abc", new VetoGuard() )
+        QueryRegistryEntry entry = new QueryRegistryEntry( null, "cypher", "endpoint", "remote", "user" )
         jsonMarshaller.marshallToJSON( entry, sw )
         def s = sw.toString()
         def dateString = entry.started.format( "yyyy-MM-dd'T'HH:mm:ss.SSSXXX" )

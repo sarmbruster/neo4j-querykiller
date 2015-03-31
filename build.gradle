@@ -20,8 +20,8 @@ repositories {
 }
 
 ext {
-    neo4jVersion = "2.1.5"
-    jerseyVersion = "1.9"
+    neo4jVersion = "2.2.0"
+    jerseyVersion = "1.18.1"
 }
 
 dependencies {
@@ -29,7 +29,7 @@ dependencies {
     compile group: 'org.neo4j', name: 'neo4j-lucene-index', version: neo4jVersion
     compile group: 'org.neo4j', name: 'server-api', version: neo4jVersion
     compile group: 'org.neo4j.app', name: 'neo4j-server', version: neo4jVersion
-    testCompile group: 'org.neo4j.contrib', name: 'neo4j-spock-extension', version: '0.4'
+    testCompile group: 'org.neo4j.contrib', name: 'neo4j-spock-extension', version: '0.5.2'
     //testCompile group: 'com.sun.jersey', name: 'jersey-json', version: jerseyVersion  // make sure this jar is copied to neo4j as well
 }
 

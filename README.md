@@ -2,14 +2,6 @@ neo4j-querykiller
 =================
 
 This project's goal is to provide a convenient way to terminate individual cypher queries running on a Neo4j server.
-It is delivered in two subprojects:
-
-1. community
-Licensed GPL
-
-
-1. enterprise
-Licensed AGPL
 
 Installation
 ------------
@@ -22,7 +14,6 @@ Download Neo4j from the [downloads page](http://www.neo4j.org/download) and extr
 
 Gradle's deploy target copies the querykiller jar file to your Neo4j folder and sets up the configuration for you. In detail, the following actions are taken:
 * build the jar file for querykiller and copy it to `<neo4j-dir>/plugins`
-* amend `execution_guard_enabled=true` to `<neo4j-dir>/conf/neo4j.properties`
 * amend `org.neo4j.server.thirdparty_jaxrs_classes=org.neo4j.extension.querykiller=/querykiller` to `<neo4j-dir>/conf/neo4j-server.properties`
 
 Features
@@ -68,7 +59,7 @@ Kill the query by using the 'key' value from the previous query:
 Implementation
 --------------
 
-QueryRegistryExtension is a kernel extension to Neo4j and allows to register and unregister queries. Upon registering a VetoGuard is established and a identifier for that query is created. When a query should be terminated, QueryRegistryExtension#abortQuery sets a flag in the respective guard. The next graph access will result the VetoGuard to emit an exception which causes the query to stop.
+QueryRegistryExtension is a kernel extension to Neo4j and allows to register and unregister queries. When a query should be terminated, `terminate()` is called on the respective transaction.
 
 A servlet filter (QueryKillerFilter.java) is registered via a SPIPPluginLifecycle: Lifecycle.java. The filter intercepts every execution of a cypher statement and registers/unregisters it with the QueryRegistry.
 

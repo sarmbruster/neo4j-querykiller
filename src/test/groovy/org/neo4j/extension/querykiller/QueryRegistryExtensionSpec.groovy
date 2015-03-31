@@ -1,23 +1,25 @@
 package org.neo4j.extension.querykiller
 
-import org.neo4j.kernel.guard.Guard
+import org.neo4j.graphdb.Transaction
 import spock.lang.Specification
 
 class QueryRegistryExtensionSpec extends Specification
 {
 
+    def transactionMock = [ terminate: {->}] as Transaction
+
     def "registering and unregistering of queries"() {
         setup:
-        QueryRegistryExtension queryRegistryExtension = new QueryRegistryExtension( new Guard(null))
+        QueryRegistryExtension queryRegistryExtension = new QueryRegistryExtension()
 
         when:
-        def q1 = queryRegistryExtension.registerQuery("cypher1", "endPoint", "127.0.0.1", null)
+        def q1 = queryRegistryExtension.registerQuery(transactionMock, "cypher1", "endPoint", "127.0.0.1", null)
 
         then:
         queryRegistryExtension.runningQueries.size() == 1
 
         when:
-        def q2 = queryRegistryExtension.registerQuery("cypher2", "endPoint", "127.0.0.1", null)
+        def q2 = queryRegistryExtension.registerQuery(transactionMock, "cypher2", "endPoint", "127.0.0.1", null)
 
         then:
         queryRegistryExtension.runningQueries.size() == 2
@@ -53,23 +55,23 @@ class QueryRegistryExtensionSpec extends Specification
 
     def "termination of a queries"() {
         setup:
-        QueryRegistryExtension queryRegistryExtension = new QueryRegistryExtension( new Guard(null))
+        QueryRegistryExtension queryRegistryExtension = new QueryRegistryExtension()
 
         when:
-        def q1 = queryRegistryExtension.registerQuery("cypher1-t", "endPoint", "127.0.0.1", null)
-        def q2 = queryRegistryExtension.registerQuery("cypher2-t", "endPoint", "127.0.0.1", null)
+        def q1 = queryRegistryExtension.registerQuery(transactionMock, "cypher1-t", "endPoint", "127.0.0.1", null)
+        def q2 = queryRegistryExtension.registerQuery(transactionMock, "cypher2-t", "endPoint", "127.0.0.1", null)
 
         then: "guards are not triggered"
-        q1.getVetoGuard().abort == false
-        q2.getVetoGuard().abort == false
+        q1.killed == false
+        q2.killed == false
 
         when:
         queryRegistryExtension.abortQuery(q1.key)
 
         then:
         then: "q1 guard has been triggered"
-        q1.getVetoGuard().abort == true
-        q2.getVetoGuard().abort == false
+        q1.killed == true
+        q2.killed == false
 
         when: "try to abort a unregistered query"
         queryRegistryExtension.unregisterQuery(q2)
@@ -81,10 +83,10 @@ class QueryRegistryExtensionSpec extends Specification
 
     def "tabular output matches table structure"() {
         setup:
-        QueryRegistryExtension queryRegistryExtension = new QueryRegistryExtension( new Guard(null))
+        QueryRegistryExtension queryRegistryExtension = new QueryRegistryExtension()
         assert queryRegistryExtension.runningQueries.size() == 0
-        queryRegistryExtension.registerQuery("cypher1", "endPoint", "127.0.0.1", null)
-        queryRegistryExtension.registerQuery("cypher2", "endPoint", "127.0.0.1", null)
+        queryRegistryExtension.registerQuery(transactionMock, "cypher1", "endPoint", "127.0.0.1", null)
+        queryRegistryExtension.registerQuery(transactionMock, "cypher2", "endPoint", "127.0.0.1", null)
 
         when:
         def lines = queryRegistryExtension.formatAsTable().split("\n")

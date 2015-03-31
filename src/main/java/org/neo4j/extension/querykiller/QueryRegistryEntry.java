@@ -1,5 +1,7 @@
 package org.neo4j.extension.querykiller;
 
+import org.neo4j.graphdb.Transaction;
+
 import javax.xml.bind.annotation.*;
 import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
 import java.security.MessageDigest;
@@ -17,15 +19,16 @@ public class QueryRegistryEntry implements Comparable {
     private String endPoint;
     private Date started = new Date();
     private long thread = Thread.currentThread().getId();
-    private VetoGuard vetoGuard;
+    private Transaction transaction;
+    private boolean killed = false;
 
     public QueryRegistryEntry() {
     }
 
-    public QueryRegistryEntry( VetoGuard vetoGuard, String cypher, String endPoint, String remoteHost,
+    public QueryRegistryEntry( Transaction transaction, String cypher, String endPoint, String remoteHost,
                                String remoteUser )
     {
-        this.vetoGuard = vetoGuard;
+        this.transaction = transaction;
         this.cypher = cypher.replace( "\n", "" ).trim();
         this.key = calculateKey();
         this.endPoint = endPoint;
@@ -100,14 +103,22 @@ public class QueryRegistryEntry implements Comparable {
     }
 
     @XmlTransient
-    public VetoGuard getVetoGuard() {
-        return vetoGuard;
+    public Transaction getTransaction() {
+        return transaction;
     }
 
-    public void setVetoGuard(VetoGuard vetoGuard) {
-        this.vetoGuard = vetoGuard;
+    public void setTransaction(Transaction transaction) {
+        this.transaction = transaction;
     }
 
+    public boolean isKilled() {
+        return killed;
+    }
+
+    public void kill() {
+        transaction.terminate();
+        killed = true;
+    }
 
     private String calculateKey() {
         try {
@@ -182,7 +193,7 @@ public class QueryRegistryEntry implements Comparable {
         {
             return false;
         }
-        if ( vetoGuard != null ? !vetoGuard.equals( that.vetoGuard ) : that.vetoGuard != null )
+        if ( transaction != null ? !transaction.equals( that.transaction ) : that.transaction != null )
         {
             return false;
         }
@@ -200,7 +211,7 @@ public class QueryRegistryEntry implements Comparable {
         result = 31 * result + (endPoint != null ? endPoint.hashCode() : 0);
         result = 31 * result + started.hashCode();
         result = 31 * result + (int) (thread ^ (thread >>> 32));
-        result = 31 * result + (vetoGuard != null ? vetoGuard.hashCode() : 0);
+        result = 31 * result + (transaction != null ? transaction.hashCode() : 0);
         return result;
     }
 

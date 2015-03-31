@@ -8,6 +8,7 @@ import org.neo4j.extension.querykiller.events.QueryAbortedEvent
 import org.neo4j.extension.querykiller.events.QueryRegisteredEvent
 import org.neo4j.extension.querykiller.events.QueryUnregisteredEvent
 import org.neo4j.extension.spock.Neo4jServerResource
+import org.neo4j.test.Mute
 import org.neo4j.test.server.HTTP
 import spock.lang.Shared
 import spock.lang.Specification
@@ -22,8 +23,16 @@ class QueryKillerRestSpec extends Specification {
     public static final String MOUNTPOINT = "querykiller"
 
     @Shared
+    @ClassRule
+    Mute mute = Mute.muteAll()
+
+    @Shared
     @ClassRule Neo4jServerResource neo4j = new Neo4jServerResource(
-            config: [ execution_guard_enabled: "true" ],
+            config: [
+                    cache_type: "none",
+                    "dbms.pagecache.memory": "1M"
+
+            ],
             thirdPartyJaxRsPackages: [
                     "org.neo4j.extension.querykiller.server": "/$MOUNTPOINT",
                     "org.neo4j.extension.querykiller.helper": "/$MOUNTPOINT",
