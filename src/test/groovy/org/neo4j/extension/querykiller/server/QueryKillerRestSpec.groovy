@@ -7,15 +7,17 @@ import org.neo4j.extension.querykiller.QueryRegistryExtension
 import org.neo4j.extension.querykiller.events.QueryAbortedEvent
 import org.neo4j.extension.querykiller.events.QueryRegisteredEvent
 import org.neo4j.extension.querykiller.events.QueryUnregisteredEvent
+import org.neo4j.extension.querykiller.helper.CounterObserver
 import org.neo4j.extension.spock.Neo4jServerResource
 import org.neo4j.test.Mute
-import org.neo4j.test.server.HTTP
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
 
 import javax.ws.rs.core.MediaType
 import java.util.concurrent.TimeoutException
+
+import static org.neo4j.extension.querykiller.helper.SpecHelper.*
 
 @Slf4j
 class QueryKillerRestSpec extends Specification {
@@ -248,43 +250,19 @@ class QueryKillerRestSpec extends Specification {
     }
 
     /**
-      * create a collection structure fitting being suitable for json format used for
-      * transactional endpoint
-      * @param statements array holding cypher statements
-      * @param params array holding parameter for statements
-      * @return
-      */
-     def createJsonForTransactionalEndpoint( statements,  params=null) {
-         if (!params) {
-             params = statements.collect {[:]}
-         }
-         def transposed = [statements, params].transpose()
-         [
-                 statements: transposed.collect { [statement: it[0], params: it[1]] }
-         ]
-     }
-
-    private void sleepUntil(Closure closure) {
-        long started = System.currentTimeMillis()
-        while (closure.call() == false) {
-            sleep 5;
-            if ((System.currentTimeMillis()-started) > 10*1000) {
-                log.error("timeout in sleepUntil")
-                throw new TimeoutException("timeout in sleepUntil")
-            }
+     * create a collection structure fitting being suitable for json format used for
+     * transactional endpoint
+     * @param statements array holding cypher statements
+     * @param params array holding parameter for statements
+     * @return
+     */
+    def createJsonForTransactionalEndpoint(statements, params = null) {
+        if (!params) {
+            params = statements.collect { [:] }
         }
-    }
-
-    @Slf4j
-    class CounterObserver implements Observer {
-        def counters = [:].withDefault { 0 }
-        @Override
-        void update( Observable obs, Object o )
-        {
-            synchronized (o.class) {  // this get concurrently called from different threads -> synchronized is crucial
-                counters[o.class]++
-                log.info("incrementing for ${o.class}: ${counters[o.class]}")
-            }
-        }
+        def transposed = [statements, params].transpose()
+        [
+                statements: transposed.collect { [statement: it[0], params: it[1]] }
+        ]
     }
 }
