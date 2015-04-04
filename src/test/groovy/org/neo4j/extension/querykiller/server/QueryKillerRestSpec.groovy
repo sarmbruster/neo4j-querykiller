@@ -52,17 +52,12 @@ class QueryKillerRestSpec extends Specification {
         observable.deleteObserver(countObserver)
     }
 
-    // TODO: refactor to Neo4jServerResponse.http when 0.2 is released
-    def getHttp() {
-        HTTP.withBaseUri(neo4j.baseUrl)
-    }
-
     def "send cypher query"() {
         when:
         def json = [
                 query: "MATCH (n) RETURN count(n) AS c",
         ]
-        def response = http.POST("db/data/cypher", json)
+        def response = neo4j.http.POST("db/data/cypher", json)
 
         then:
         response.status() == 200
@@ -84,7 +79,7 @@ class QueryKillerRestSpec extends Specification {
         def delay = 100
 
         def now = System.currentTimeMillis()
-        def response = http
+        def response = neo4j.http
                 .withHeaders("X-Delay", delay as String)
                 .POST("db/data/cypher", json)
         def duration = System.currentTimeMillis() - now
@@ -114,7 +109,7 @@ class QueryKillerRestSpec extends Specification {
         sleepUntil { countObserver.counters[QueryRegisteredEvent.class] == numberOfQueries}
 
         when: "check query list"
-        def response = http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
+        def response = neo4j.http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
 
         then:
         response.status() == 200
@@ -126,7 +121,7 @@ class QueryKillerRestSpec extends Specification {
         when:
         sleepUntil { countObserver.counters[QueryUnregisteredEvent.class] == numberOfQueries}
 
-        response = http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
+        response = neo4j.http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
 
         then:
         response.status() == 200
@@ -157,7 +152,7 @@ class QueryKillerRestSpec extends Specification {
         sleepUntil { countObserver.counters[QueryRegisteredEvent.class] == 1}
 
         when: "check query list"
-        def response = http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
+        def response = neo4j.http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
 
         then:
         response.status() == 200
@@ -171,7 +166,7 @@ class QueryKillerRestSpec extends Specification {
 
         when:
         def key = response.content()[0].key
-        http.DELETE("$MOUNTPOINT/$key")
+        neo4j.http.DELETE("$MOUNTPOINT/$key")
 
         then: "delete operation returned 204"
         def e = thrown(UniformInterfaceException) // it's weird but a 204 is wrapped into an exception
@@ -181,7 +176,7 @@ class QueryKillerRestSpec extends Specification {
         sleepUntil { (countObserver.counters[QueryAbortedEvent.class] == 1) &&
              (countObserver.counters[QueryUnregisteredEvent.class] == 1)
         }
-        response = http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
+        response = neo4j.http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
 
         then:
         response.status() == 200
@@ -211,7 +206,7 @@ class QueryKillerRestSpec extends Specification {
 
 
         when: "check query list"
-        def response = http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
+        def response = neo4j.http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
 
         then:
         response.status() == 200
@@ -227,7 +222,7 @@ class QueryKillerRestSpec extends Specification {
     def "should transactional endpoint work with multiple requests per transaction"() {
 
         when:
-        def response = http.POST("db/data/transaction") //, createJsonForTransactionalEndpoint(["MATCH (n) RETURN count(n)"] ))
+        def response = neo4j.http.POST("db/data/transaction") //, createJsonForTransactionalEndpoint(["MATCH (n) RETURN count(n)"] ))
 
         then:
         response.status() == 201
@@ -236,20 +231,20 @@ class QueryKillerRestSpec extends Specification {
 
         def location = response.header("Location")
         def url = location - neo4j.baseUrl
-        response = http.withHeaders("X-Delay", "1000").POST(url + "/commit", createJsonForTransactionalEndpoint(["MATCH (n) RETURN count(n)"] ))
+        response = neo4j.http.withHeaders("X-Delay", "1000").POST(url + "/commit", createJsonForTransactionalEndpoint(["MATCH (n) RETURN count(n)"] ))
 
         then:
         response.status() == 200
     }
 
     Closure runCypherQueryViaLegacyEndpoint = { delay ->
-        http.withHeaders("X-Delay", delay as String).POST("db/data/cypher", [
+        neo4j.http.withHeaders("X-Delay", delay as String).POST("db/data/cypher", [
                 query: "MATCH (n) RETURN count(n) AS c",
         ])
     }
 
     Closure runCypherQueryViaTransactionalEndpoint = { delay, statements, params = null ->
-        http.withHeaders("X-Delay", delay as String).POST("db/data/transaction/commit", createJsonForTransactionalEndpoint(statements, params))
+        neo4j.http.withHeaders("X-Delay", delay as String).POST("db/data/transaction/commit", createJsonForTransactionalEndpoint(statements, params))
     }
 
     /**
