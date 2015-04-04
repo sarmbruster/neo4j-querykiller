@@ -24,8 +24,6 @@ public class StatisticsService {
     @Produces(MediaType.APPLICATION_JSON)
     public Map<String, QueryStat> statistics() {
         return queryStatisticsExtension.getSortedStatistics();
-
-
     }
 
     @DELETE

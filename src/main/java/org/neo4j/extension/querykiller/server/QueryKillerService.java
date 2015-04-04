@@ -21,7 +21,6 @@ public class QueryKillerService {
 
     public final Logger log = LoggerFactory.getLogger(QueryKillerService.class);
 
-
     @Context
     private QueryRegistryExtension queryRegistryExtension;
 

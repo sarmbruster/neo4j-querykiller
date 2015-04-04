@@ -33,9 +33,7 @@ public class QueryKillerLifecycle extends DepenceyResolverAwareLifecycle {
         // wrap filter around legacy cypher endpoint
         webServer.addFilter(new LegacyCypherQueryKillerFilter(queryRegistryExtension, graphDatabaseService), "/cypher");
 
-
         TransactionalCypherQueryKillerFilter transactionalCypherQueryKillerFilter = new TransactionalCypherQueryKillerFilter(queryRegistryExtension, graphDatabaseService, transactionRegistry);
-
         webServer.addFilter(transactionalCypherQueryKillerFilter, "/transaction/*");
 //        webServer.addFilter(transactionalCypherQueryKillerFilter, "/transaction"); // "/*" for catch all
     }
