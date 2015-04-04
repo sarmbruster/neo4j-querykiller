@@ -19,6 +19,13 @@ repositories {
     //mavenLocal()
 }
 
+configurations {
+    fat {
+        description = "farjar"
+        transitive = true
+    }
+}
+
 ext {
     neo4jVersion = "2.2.0"
     jerseyVersion = "1.18.1"
@@ -31,11 +38,21 @@ dependencies {
     compile group: 'org.neo4j.app', name: 'neo4j-server', version: neo4jVersion
     testCompile group: 'org.neo4j.contrib', name: 'neo4j-spock-extension', version: '0.5.2'
     //testCompile group: 'com.sun.jersey', name: 'jersey-json', version: jerseyVersion  // make sure this jar is copied to neo4j as well
+    runtime 'org.glassfish.jersey.media:jersey-media-json-jackson:2.13'
+
+    fat 'org.glassfish.jersey.media:jersey-media-json-jackson:2.13'
 }
 
 version = "1.0.0-SNAPSHOT"
 group = "org.neo4j.extension.querykiller"
 
+task fatJar(type: Jar) {
+    baseName = project.name + '-all'
+    from {
+           configurations.fat.collect { it.isDirectory() ? it : zipTree(it) }
+    }
+    with jar
+}
 
 publishing {
     publications {
