@@ -3,7 +3,6 @@ package org.neo4j.extension.querykiller.statistics;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
-import java.io.IOException;
 import java.util.Map;
 
 @Path("/")
@@ -23,17 +22,14 @@ public class StatisticsService {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public Map<String, QueryStat> statistics() throws IOException {
+    public Map<String, QueryStat> statistics() {
         return queryStatisticsExtension.getSortedStatistics();
 
 
     }
 
-/*
     @DELETE
-    @Path("/{queryKey}")
-    public void killQuery(@PathParam("queryKey") String queryKey) {
-        queryStatisticsExtension.abortQuery(queryKey);
+    public void clearStatistics() {
+        queryStatisticsExtension.clear();
     }
-*/
 }

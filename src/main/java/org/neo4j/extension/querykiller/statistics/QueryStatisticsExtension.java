@@ -65,4 +65,8 @@ public class QueryStatisticsExtension implements Lifecycle, Observer
     public void shutdown() throws Throwable {
         observable.deleteObserver(this);
     }
+
+    public void clear() {
+        statistics.clear();
+    }
 }

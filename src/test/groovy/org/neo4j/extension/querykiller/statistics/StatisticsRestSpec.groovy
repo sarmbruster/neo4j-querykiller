@@ -1,5 +1,6 @@
 package org.neo4j.extension.querykiller.statistics
 
+import com.sun.jersey.api.client.UniformInterfaceException
 import org.junit.ClassRule
 import org.neo4j.extension.spock.Neo4jServerResource
 import spock.lang.Shared
@@ -47,6 +48,34 @@ class StatisticsRestSpec extends Specification {
         response.content().size() == 1
         response.content()[cypher].total > 0
         response.content()[cypher].durations.size() == 2
+    }
+
+    def "statistics can be flushed"() {
+
+        when: "submit a cypher query"
+        def cypher = "MATCH (n) RETURN count(n) AS c"
+        neo4j.http.POST("db/data/cypher", [query: cypher])
+        def response = neo4j.http.GET(MOUNTPOINT)
+
+        then:
+        response.status() == 200
+        response.content().size() == 1
+
+        when: "flushing"
+        response = neo4j.http.DELETE(MOUNTPOINT)
+
+        then: "delete operation returned 204"
+        def e = thrown(UniformInterfaceException) // it's weird but a 204 is wrapped into an exception
+        e.response.status == 204
+
+        when:
+        response = neo4j.http.GET(MOUNTPOINT)
+
+        then:
+        response.status() == 200
+        response.content().size() == 0
+
+
     }
 
 }
