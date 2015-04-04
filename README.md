@@ -55,7 +55,39 @@ Check which queries are running:
 Kill the query by using the 'key' value from the previous query:
 
     curl -X DELETE http://localhost:7474/querykiller/2161824329
+    
+### statistics
+    
+Querykiller implements the observer pattern. One observer is statistics.
 
+Get a list of all queries run so far:
+
+    curl http://localhost:7474/statistics/
+
+    {
+        "[\"MATCH (n:Person) RETURN n LIMIT 25\"]": {
+            "durations": {
+                "2015-04-04T12:11:57.358+0000": 1200, 
+                "2015-04-04T12:12:05.929+0000": 7
+            }, 
+            "total": 1207
+        }, 
+        "[\"MATCH a -[r]- b WHERE id(a) IN[0,6,7,8]\\nAND id(b) IN[0,6,7,8]\\nRETURN r;\"]": {
+            "durations": {
+                "2015-04-04T12:11:58.588+0000": 417, 
+                "2015-04-04T12:12:06.005+0000": 8
+            }, 
+            "total": 425
+        }
+    }
+    
+A map is returned. Its keys are the cypher queries, the values are a map holding the aggregated total runtime of this query ("total")
+    and a collection of the individual invocatations with timestamp and duration.
+    
+NB: the statistics can grow large, to clear them:
+
+    curl -X DELETE http://localhost:7474/statistics/
+    
 Implementation
 --------------
 
@@ -70,7 +102,7 @@ QueryKillerApp contributes a interface for listing running queries and terminati
 further ideas
 -------------
 
-* [ ] gather statistics of queries
+* [x] gather statistics of queries
 * [ ] integration in Neo4j browser
 * [x] support for transactional cypher endpoint
 * [ ] expose querykiller as a JMX bean
