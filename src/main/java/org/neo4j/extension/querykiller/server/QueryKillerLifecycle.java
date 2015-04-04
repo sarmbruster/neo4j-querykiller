@@ -6,6 +6,7 @@ import org.neo4j.extension.querykiller.filter.TransactionalCypherQueryKillerFilt
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.server.NeoServer;
+import org.neo4j.server.rest.transactional.TransactionRegistry;
 import org.neo4j.server.web.WebServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,10 +28,16 @@ public class QueryKillerLifecycle extends DepenceyResolverAwareLifecycle {
         final QueryRegistryExtension queryRegistryExtension = dependencyResolver.resolveDependency(QueryRegistryExtension.class);
         final GraphDatabaseService graphDatabaseService = neoServer.getDatabase().getGraph();
 
-        webServer.addFilter(new LegacyCypherQueryKillerFilter(queryRegistryExtension, graphDatabaseService), "/cypher"); // "/*" for catch all
-        TransactionalCypherQueryKillerFilter transactionalCypherQueryKillerFilter = new TransactionalCypherQueryKillerFilter(queryRegistryExtension, graphDatabaseService);
-        webServer.addFilter(transactionalCypherQueryKillerFilter, "/transaction/*"); // "/*" for catch all
-        webServer.addFilter(transactionalCypherQueryKillerFilter, "/transaction"); // "/*" for catch all
+        TransactionRegistry transactionRegistry =  neoServer.getTransactionRegistry();
+
+        // wrap filter around legacy cypher endpoint
+        webServer.addFilter(new LegacyCypherQueryKillerFilter(queryRegistryExtension, graphDatabaseService), "/cypher");
+
+
+        TransactionalCypherQueryKillerFilter transactionalCypherQueryKillerFilter = new TransactionalCypherQueryKillerFilter(queryRegistryExtension, graphDatabaseService, transactionRegistry);
+
+        webServer.addFilter(transactionalCypherQueryKillerFilter, "/transaction/*");
+//        webServer.addFilter(transactionalCypherQueryKillerFilter, "/transaction"); // "/*" for catch all
     }
 
 }

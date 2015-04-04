@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
@@ -47,31 +48,60 @@ public abstract class QueryKillerFilter implements Filter {
 
         if (shouldInterceptThisRequest(request)) {
 
-            log.debug( "intercepting request");
+            String requestURI = ((HttpServletRequest) request).getRequestURI();
+            log.debug("intercepting request " + requestURI);
             HttpServletRequest copyRequest = new CopyHttpServletRequest((HttpServletRequest)request);
-            String cypher = extractCypherFromRequest( copyRequest );
+
+            RequestType requestType = determineRequestType(copyRequest);
 
             QueryRegistryEntry queryMapEntry = null;
-            try (Transaction tx = graphDatabaseService.beginTx()) {
-                queryMapEntry = queryRegistryExtension.registerQuery(
-                        tx,
-                        cypher,
-                        copyRequest.getPathInfo(),
-                        copyRequest.getRemoteHost(),
-                        copyRequest.getRemoteUser());
+            String cypher = extractCypherFromRequest( copyRequest );
+            Transaction tx = getTransaction(requestType, copyRequest);
+            try {
+                queryMapEntry = preProcess(requestType, copyRequest, cypher, tx);
                 chain.doFilter(copyRequest, response);
-                tx.success();
-            } finally {
-                queryRegistryExtension.unregisterQuery(queryMapEntry);
-                log.debug( "intercepting request DONE");
+                if (tx!=null) {
+                    tx.success();
+                }
+            } catch (Exception e) {
+                throw e;
+            }
+
+            finally {
+                postProcess(requestType, copyRequest, cypher, tx, queryMapEntry, (HttpServletResponse) response);
+                if (tx!=null) {
+                    tx.close();
+                }
+                log.debug("intercepting request DONE");
             }
         } else {
             chain.doFilter(request, response);
         }
-
     }
 
-    private boolean shouldInterceptThisRequest(ServletRequest request) {
+    protected RequestType determineRequestType(HttpServletRequest copyRequest) {
+        return RequestType.ONE_SHOT;
+    }
+
+    protected Transaction getTransaction(RequestType requestType, HttpServletRequest request) {
+        return graphDatabaseService.beginTx();
+    }
+
+    protected QueryRegistryEntry preProcess(RequestType requestType, HttpServletRequest request, String cypher, Transaction tx) {
+        QueryRegistryEntry queryMapEntry = queryRegistryExtension.registerQuery(
+                tx,
+                cypher,
+                request.getPathInfo(),
+                request.getRemoteHost(),
+                request.getRemoteUser());
+        return queryMapEntry;
+    }
+
+    protected void postProcess(RequestType requestType, HttpServletRequest request, String cypher, Transaction tx, QueryRegistryEntry queryMapEntry, HttpServletResponse response) {
+        queryRegistryExtension.unregisterQuery(queryMapEntry);
+    }
+
+    protected boolean shouldInterceptThisRequest(ServletRequest request) {
         return true;
 /*
         HttpServletRequest hsr = (HttpServletRequest) request;
@@ -85,7 +115,7 @@ public abstract class QueryKillerFilter implements Filter {
 */
     }
 
-    protected abstract String extractCypherFromRequest(HttpServletRequest copyRequest) throws IOException;
+    protected abstract String extractCypherFromRequest(HttpServletRequest copyRequest);
 
     @Override
     public void destroy() {

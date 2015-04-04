@@ -224,24 +224,42 @@ class QueryKillerRestSpec extends Specification {
         threads.each { it.join() }
     }
 
+    def "should transactional endpoint work with multiple requests per transaction"() {
+
+        when:
+        def response = http.POST("db/data/transaction") //, createJsonForTransactionalEndpoint(["MATCH (n) RETURN count(n)"] ))
+
+        then:
+        response.status() == 201
+
+        when:
+
+        def location = response.header("Location")
+        def url = location - neo4j.baseUrl
+        response = http.withHeaders("X-Delay", "1000").POST(url + "/commit", createJsonForTransactionalEndpoint(["MATCH (n) RETURN count(n)"] ))
+
+        then:
+        response.status() == 200
+    }
+
     Closure runCypherQueryViaLegacyEndpoint = { delay ->
-         http.withHeaders("X-Delay", delay as String).POST("db/data/cypher", [
-                 query: "MATCH (n) RETURN count(n) AS c",
-         ])
-     }
+        http.withHeaders("X-Delay", delay as String).POST("db/data/cypher", [
+                query: "MATCH (n) RETURN count(n) AS c",
+        ])
+    }
 
-     Closure runCypherQueryViaTransactionalEndpoint = { delay, statements, params=null ->
-         http.withHeaders("X-Delay", delay as String).POST("db/data/transaction/commit", createJsonForTransactionalEndpoint(statements, params))
-     }
+    Closure runCypherQueryViaTransactionalEndpoint = { delay, statements, params = null ->
+        http.withHeaders("X-Delay", delay as String).POST("db/data/transaction/commit", createJsonForTransactionalEndpoint(statements, params))
+    }
 
-     /**
+    /**
       * create a collection structure fitting being suitable for json format used for
       * transactional endpoint
       * @param statements array holding cypher statements
       * @param params array holding parameter for statements
       * @return
       */
-     def createJsonForTransactionalEndpoint( statements,  params) {
+     def createJsonForTransactionalEndpoint( statements,  params=null) {
          if (!params) {
              params = statements.collect {[:]}
          }

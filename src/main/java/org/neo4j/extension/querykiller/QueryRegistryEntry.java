@@ -36,9 +36,9 @@ public class QueryRegistryEntry implements Comparable {
         this.remoteUser = remoteUser;
     }
 
-    public void setKey(String key) {
-        this.key = key;
-    }
+//    public void setKey(String key) {
+//        this.key = key;
+//    }
 
     // key is lazy
     public String getKey() {
@@ -52,64 +52,64 @@ public class QueryRegistryEntry implements Comparable {
         return cypher;
     }
 
-    public void setCypher(String cypher) {
-        this.cypher = cypher;
-    }
+//    public void setCypher(String cypher) {
+//        this.cypher = cypher;
+//    }
 
     public Date getStarted() {
         return started;
     }
 
-    public void setStarted(Date started) {
-        this.started = started;
-    }
+//    public void setStarted(Date started) {
+//        this.started = started;
+//    }
 
     public long getThread() {
         return thread;
     }
 
-    public void setThread(long thread) {
-        this.thread = thread;
-    }
+//    public void setThread(long thread) {
+//        this.thread = thread;
+//    }
 
     public String getRemoteUser()
     {
         return remoteUser;
     }
 
-    public void setRemoteUser( String remoteUser )
-    {
-        this.remoteUser = remoteUser;
-    }
+//    public void setRemoteUser( String remoteUser )
+//    {
+//        this.remoteUser = remoteUser;
+//    }
 
     public String getRemoteHost()
     {
         return remoteHost;
     }
 
-    public void setRemoteHost( String remoteHost )
-    {
-        this.remoteHost = remoteHost;
-    }
+//    public void setRemoteHost( String remoteHost )
+//    {
+//        this.remoteHost = remoteHost;
+//    }
 
     public String getEndPoint()
     {
         return endPoint;
     }
 
-    public void setEndPoint( String endPoint )
-    {
-        this.endPoint = endPoint;
-    }
+//    public void setEndPoint( String endPoint )
+//    {
+//        this.endPoint = endPoint;
+//    }
 
-    @XmlTransient
-    public Transaction getTransaction() {
-        return transaction;
-    }
-
-    public void setTransaction(Transaction transaction) {
-        this.transaction = transaction;
-    }
+//    @XmlTransient
+//    public Transaction getTransaction() {
+//        return transaction;
+//    }
+//
+//    public void setTransaction(Transaction transaction) {
+//        this.transaction = transaction;
+//    }
 
     public boolean isKilled() {
         return killed;

@@ -17,9 +17,13 @@ public class LegacyCypherQueryKillerFilter extends QueryKillerFilter {
     }
 
     @Override
-    protected String extractCypherFromRequest(HttpServletRequest copyRequest) throws IOException
+    protected String extractCypherFromRequest(HttpServletRequest copyRequest)
     {
-        return getObjectMapper().readTree( copyRequest.getReader() ).get( "query" ).getTextValue();
+        try {
+            return getObjectMapper().readTree( copyRequest.getReader() ).get( "query" ).getTextValue();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }
