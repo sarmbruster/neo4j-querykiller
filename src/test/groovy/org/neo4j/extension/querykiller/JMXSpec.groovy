@@ -38,7 +38,6 @@ class JMXSpec extends Specification {
         observable.deleteObserver(countObserver)
     }
 
-
     def "query killer is available via JMX"() {
         when:
 
