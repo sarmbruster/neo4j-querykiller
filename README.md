@@ -1,20 +1,24 @@
 neo4j-querykiller
 =================
 
-This project's goal is to provide a convenient way to terminate individual cypher queries running on a Neo4j server.
+This project's main goal is to provide a convenient way to terminate individual cypher queries running on a Neo4j server. A secondary goal is to provide statistics on how long and how often a certain query is executes. This information basically gives the most impacting queries as candidates for optimization.
 
 Installation
 ------------
 
-The simple way:
+Use [gradle](http://www.gradle.org) to build the project:
 
-Download Neo4j from the [downloads page](http://www.neo4j.org/download) and extract it. Then run the following:
+    ./graldew fatJar
+    
+The `fatJar` task creates one single jar file containing the code of neo4j-querykiller itself and those of its dependencies not being part of the neo4j distribution. See [build.gradle](build.gradle)'s the `fat` dependencies in the dependency section.
+     
+Copy (or symlink) the resulting file `./build/libs/neo4j-querykiller-all-1.0.0-SNAPSHOT.jar` to Neo4j's plugin folder.
+  
+Change configuration in `$NEO4J/conf/neo4j-server.properties`:
 
-    ./gradlew -Pneo4jDirectory=<neo4j-dir> deploy
+    org.neo4j.server.thirdparty_jaxrs_classes=org.neo4j.extension.querykiller.server=/querykiller,org.neo4j.extension.querykiller.statistics=/statistics
 
-Gradle's deploy target copies the querykiller jar file to your Neo4j folder and sets up the configuration for you. In detail, the following actions are taken:
-* build the jar file for querykiller and copy it to `<neo4j-dir>/plugins`
-* amend `org.neo4j.server.thirdparty_jaxrs_classes=org.neo4j.extension.querykiller=/querykiller` to `<neo4j-dir>/conf/neo4j-server.properties`
+After a restart using `$NEO4J_HOME/bin/neo4j restart` the extensions are active.
 
 Features
 --------
@@ -82,16 +86,18 @@ Get a list of all queries run so far:
     }
     
 A map is returned. Its keys are the cypher queries, the values are a map holding the aggregated total runtime of this query ("total")
-    and a collection of the individual invocatations with timestamp and duration.
+    and a collection of the individual invocations with timestamp and duration.
     
-NB: the statistics can grow large, to clear them:
+NB: the statistics can grow large and memory consuming, to clear them:
 
     curl -X DELETE http://localhost:7474/statistics/
     
 Implementation
 --------------
 
-QueryRegistryExtension is a kernel extension to Neo4j and allows to register and unregister queries. When a query should be terminated, `terminate()` is called on the respective transaction.
+QueryRegistryExtension is a kernel extension to Neo4j and allows to register and unregister queries. The registration of a query requires providing the transaction it runs in. For the legacy cypher endpoint a transaction is provided by the servlet filter (see below). For the transactional cypher endpoint the respective transaction is retrieved via Neo4j's internal `TransactionRegistry`. The kernel extension features termination of a query through sending `terminate()` to its transaction.
+   
+The kernel extension additionally acts as [Observable](https://docs.oracle.com/javase/7/docs/api/java/util/Observable.html). Other components (e.g. QueryStatisticsExtension) can register themselves as observer. See [here](./src/main/java/org/neo4j/extension/querykiller/events) for a list of supported events.
 
 A servlet filter (QueryKillerFilter.java) is registered via a SPIPPluginLifecycle: Lifecycle.java. The filter intercepts every execution of a cypher statement and registers/unregisters it with the QueryRegistry.
 
@@ -105,7 +111,7 @@ further ideas
 * [x] gather statistics of queries
 * [ ] integration in Neo4j browser
 * [x] support for transactional cypher endpoint
-* [ ] expose querykiller as a JMX bean
+* [x] expose querykiller as a JMX bean
 * [ ] add tests for shell extension
 * [ ] better docs
 * [x] make tests more robust (use events instead of static waiting pauses)
