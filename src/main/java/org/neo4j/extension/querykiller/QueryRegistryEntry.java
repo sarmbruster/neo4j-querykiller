@@ -122,10 +122,10 @@ public class QueryRegistryEntry implements Comparable {
 
     private String calculateKey() {
         try {
-            MessageDigest md5 = MessageDigest.getInstance("SHA-1");
+            MessageDigest hash = MessageDigest.getInstance("SHA-1");
             String toDigest = String.format("%d, %d, %s", thread, started.getTime(), getCypher());
-            md5.update(toDigest.getBytes());
-            return new HexBinaryAdapter().marshal(md5.digest());
+            hash.update(toDigest.getBytes());
+            return new HexBinaryAdapter().marshal(hash.digest()).substring(0,8);
         } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }

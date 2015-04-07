@@ -59,4 +59,13 @@ class QueryRegistryEntrySpec extends Specification
         "start n=node(*) match n--(aVeryLongNameGoesHereToExceedLimit)--(next2)--abc return c" | "/cypher" | "127.0.0.1" | "start n=node(*) match n--(aVeryLongNameGoesHereToExceedLimit | 127.0.0.1       | /cypher         |"
 
     }
+
+    def "should key have 8 characters"() {
+        when:
+        QueryRegistryEntry entry = new QueryRegistryEntry( null, "cypher", "endpoint", "remote", "user" )
+
+        then:
+        entry.key.size() == 8
+
+    }
 }
