@@ -221,10 +221,11 @@ class QueryKillerRestSpec extends Specification {
         threads.each { it.join() }
     }
 
+    @Unroll
     def "should transactional endpoint work with multiple requests per transaction"() {
 
         when:
-        def response = neo4j.http.POST("db/data/transaction") //, createJsonForTransactionalEndpoint(["MATCH (n) RETURN count(n)"] ))
+        def response = neo4j.http.POST(initialURL) //, createJsonForTransactionalEndpoint(["MATCH (n) RETURN count(n)"] ))
 
         then:
         response.status() == 201
@@ -237,6 +238,12 @@ class QueryKillerRestSpec extends Specification {
 
         then:
         response.status() == 200
+
+        where:
+
+        initialURL | dummy
+        "db/data/transaction" | true
+        "db/data/transaction/" | true
     }
 
     Closure runCypherQueryViaLegacyEndpoint = { delay ->

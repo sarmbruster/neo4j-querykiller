@@ -26,7 +26,7 @@ import static org.neo4j.extension.querykiller.filter.RequestType.*;
 public class TransactionalCypherQueryKillerFilter extends QueryKillerFilter {
 
     public static final String URI_ONE_SHOT = "/db/data/transaction/commit";
-    public static final String URI_BEGIN = "/db/data/transaction";
+    public static final Pattern URI_BEGIN = Pattern.compile("^/db/data/transaction/?");
     public static final Pattern URI_AMEND = Pattern.compile("^/db/data/transaction/(\\d+)$");
     public static final Pattern URI_COMMIT = Pattern.compile("^/db/data/transaction/(\\d+)/commit$");
     public final Logger log = LoggerFactory.getLogger(TransactionalCypherQueryKillerFilter.class);
@@ -60,7 +60,7 @@ public class TransactionalCypherQueryKillerFilter extends QueryKillerFilter {
         String requestURI = copyRequest.getRequestURI();
         if (requestURI.equals(URI_ONE_SHOT)) {
             return ONE_SHOT;
-        } else if (requestURI.equals(URI_BEGIN)) {
+        } else if (URI_BEGIN.matcher(requestURI).matches()) {
             return BEGIN;
         } else if (URI_AMEND.matcher(requestURI).matches()) {
             return AMEND;
