@@ -42,8 +42,8 @@ public class TransactionalCypherQueryKillerFilter extends QueryKillerFilter {
 
     public static final String URI_ONE_SHOT = "/db/data/transaction/commit";
     public static final Pattern URI_BEGIN = Pattern.compile("^/db/data/transaction/?");
-    public static final Pattern URI_AMEND = Pattern.compile("^/db/data/transaction/(\\d+)$");
-    public static final Pattern URI_COMMIT = Pattern.compile("^/db/data/transaction/(\\d+)/commit$");
+    public static final Pattern URI_AMEND = Pattern.compile("^/db/data/transaction/(\\d+)/?$");
+    public static final Pattern URI_COMMIT = Pattern.compile("^/db/data/transaction/(\\d+)/commit/?$");
     public final Logger log = LoggerFactory.getLogger(TransactionalCypherQueryKillerFilter.class);
 
 
@@ -175,33 +175,7 @@ public class TransactionalCypherQueryKillerFilter extends QueryKillerFilter {
                     // and register that one with our QueryRegistry
                     QueryRegistryEntry queryRegistryEntry = null;
                     try {
-                        TransactionHandle transactionHandle = transactionFacade.newTransactionHandle(new TransactionUriScheme() {
-                            @Override
-                            public URI txUri(long id) {
-                                return amendToURI(id);
-                            }
-
-                            @Override
-                            public URI txCommitUri(long id) {
-                                return amendToURI(id, "/commit");
-                            }
-
-                            private URI amendToURI(Object... objs) {
-                                try {
-                                    StringBuffer sb = request.getRequestURL();
-                                    if (sb.charAt(sb.length()-1) != '/') { // prevent duplication of "/"
-                                        sb.append("/");
-                                    }
-                                    for (Object o : objs) {
-                                        sb.append(o);
-                                    }
-                                    return new URI(sb.toString());
-                                } catch (URISyntaxException e) {
-                                    throw new RuntimeException(e);
-                                }
-                            }
-
-                        });
+                        TransactionHandle transactionHandle = transactionFacade.newTransactionHandle(new UriBuilder(request));
 
                         queryRegistryEntry = queryRegistryExtension.registerQuery(new TransactionalEndpointTransactionWrapper(transactionRegistry, (Long) transactionHandleIdField.get(transactionHandle)), cypher, request.getRequestURI(), request.getRemoteHost(), request.getRemoteUser());
 
@@ -270,5 +244,39 @@ public class TransactionalCypherQueryKillerFilter extends QueryKillerFilter {
         };
     }
 
+    private static class UriBuilder implements TransactionUriScheme {
+
+        private final String requestURL;
+
+        public UriBuilder(HttpServletRequest request) {
+            this.requestURL = request.getRequestURL().toString();
+        }
+
+        @Override
+        public URI txUri(long id) {
+            return amendToURI(id);
+        }
+
+        @Override
+        public URI txCommitUri(long id) {
+            return amendToURI(id, "/commit");
+        }
+
+        private URI amendToURI(Object... objs) {
+            try {
+                StringBuilder sb = new StringBuilder(requestURL);
+                if (sb.charAt(sb.length()-1) != '/') { // prevent duplication of "/"
+                    sb.append("/");
+                }
+                for (Object o : objs) {
+                    sb.append(o);
+                }
+                return new URI(sb.toString());
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+    }
 }
 

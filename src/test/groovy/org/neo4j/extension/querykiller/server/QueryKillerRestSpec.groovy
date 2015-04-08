@@ -222,7 +222,7 @@ class QueryKillerRestSpec extends Specification {
     }
 
     @Unroll
-    def "should transactional endpoint work with multiple requests per transaction"() {
+    def "should transactional endpoint work with transaction spawned over multiple requests"() {
 
         setup:
         assert countObserver.counters.every { it.value == 0 }
@@ -237,7 +237,7 @@ class QueryKillerRestSpec extends Specification {
         when:
         def location = response.header("Location")
         def url = location - neo4j.baseUrl
-        thread = Thread.start { neo4j.http.POST(url + "/commit", createJsonForTransactionalEndpoint(["foreach (x in range(0,100000) | merge (n:Person{name:'Person'+x}))"] )) }
+        thread = Thread.start { neo4j.http.POST(url + amend2ndRequest, createJsonForTransactionalEndpoint(["foreach (x in range(0,100000) | merge (n:Person{name:'Person'+x}))"] )) }
 
         sleepUntil { countObserver.counters[QueryRegisteredEvent.class] == 2 }
 
@@ -257,16 +257,13 @@ class QueryKillerRestSpec extends Specification {
         e.response.status == 204
 
         where:
-
-        initialURL | dummy
-        "db/data/transaction" | true
-        "db/data/transaction/" | true
-
-//        cleanup:
-//        synchronized (this) {
-//            thread.wait(5000)
-//        }
-//>>>>>>> Stashed changes
+        initialURL             | amend2ndRequest
+        "db/data/transaction"  | ""
+        "db/data/transaction/" | ""
+        "db/data/transaction"  | "/"
+        "db/data/transaction/" | "/"
+        "db/data/transaction"  | "/commit"
+        "db/data/transaction/" | "/commit"
     }
 
     def "should transactional endpoint work with payload upon first request"() {
