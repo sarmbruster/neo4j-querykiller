@@ -58,16 +58,16 @@ public abstract class QueryKillerFilter implements Filter {
             String cypher = extractCypherFromRequest( copyRequest );
             Transaction tx = getTransaction(requestType, copyRequest);
             try {
-                queryMapEntry = preProcess(requestType, copyRequest, cypher, tx);
-                chain.doFilter(copyRequest, response);
+                queryMapEntry = preProcess(requestType, copyRequest, cypher, tx, response);
+                if (shouldRunFilterChain(requestType)) {
+                    chain.doFilter(copyRequest, response);
+                }
                 if (tx!=null) {
                     tx.success();
                 }
-            } catch (Exception e) {
-                throw e;
-            }
-
-            finally {
+//            } catch (Exception e) {
+//                throw e;
+            } finally {
                 postProcess(requestType, copyRequest, cypher, tx, queryMapEntry, (HttpServletResponse) response);
                 if (tx!=null) {
                     tx.close();
@@ -79,6 +79,10 @@ public abstract class QueryKillerFilter implements Filter {
         }
     }
 
+    protected boolean shouldRunFilterChain(RequestType requestType) {
+        return true;
+    }
+
     protected RequestType determineRequestType(HttpServletRequest copyRequest) {
         return RequestType.ONE_SHOT;
     }
@@ -87,7 +91,7 @@ public abstract class QueryKillerFilter implements Filter {
         return graphDatabaseService.beginTx();
     }
 
-    protected QueryRegistryEntry preProcess(RequestType requestType, HttpServletRequest request, String cypher, Transaction tx) {
+    protected QueryRegistryEntry preProcess(RequestType requestType, HttpServletRequest request, String cypher, Transaction tx, ServletResponse response) {
         QueryRegistryEntry queryMapEntry = queryRegistryExtension.registerQuery(
                 tx,
                 cypher,
@@ -103,16 +107,6 @@ public abstract class QueryKillerFilter implements Filter {
 
     protected boolean shouldInterceptThisRequest(ServletRequest request) {
         return true;
-/*
-        HttpServletRequest hsr = (HttpServletRequest) request;
-        String origin = hsr.getHeader("Origin");
-        String referer = hsr.getHeader("Referer");
-        if ((origin==null) || (referer==null)) {
-            return false;
-        } else {
-            return referer.equals(origin+ "/browser/");
-        }
-*/
     }
 
     protected abstract String extractCypherFromRequest(HttpServletRequest copyRequest);

@@ -28,7 +28,7 @@ class QueryRegistryExtensionSpec extends Specification
         queryRegistryExtension.unregisterQuery(new QueryRegistryEntry())
 
         then:
-        thrown IllegalArgumentException
+        notThrown()
 
         when:
         queryRegistryExtension.unregisterQuery(q1)
@@ -40,7 +40,7 @@ class QueryRegistryExtensionSpec extends Specification
         queryRegistryExtension.unregisterQuery(q1)
 
         then:
-        thrown IllegalArgumentException
+        notThrown()
 
         and:
         queryRegistryExtension.runningQueries.size() == 1

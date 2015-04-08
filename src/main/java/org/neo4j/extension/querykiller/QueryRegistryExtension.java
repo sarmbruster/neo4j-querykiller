@@ -7,8 +7,6 @@ import org.neo4j.extension.querykiller.events.QueryAbortedEvent;
 import org.neo4j.extension.querykiller.events.QueryRegisteredEvent;
 import org.neo4j.extension.querykiller.events.QueryUnregisteredEvent;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.guard.Guard;
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,10 +27,9 @@ public class QueryRegistryExtension extends Observable implements Lifecycle
 
     synchronized public void unregisterQuery( QueryRegistryEntry queryRegistryEntry) {
         log.debug("unregistered query for key " + queryRegistryEntry);
-        if (!runningQueries.remove(queryRegistryEntry)) {
-            throw new IllegalArgumentException("could not remove " + queryRegistryEntry.toString() + " from list of running queries");
+        if (runningQueries.remove(queryRegistryEntry)) {
+            forceNotifyObservers(new QueryUnregisteredEvent(queryRegistryEntry));
         }
-        forceNotifyObservers(new QueryUnregisteredEvent(queryRegistryEntry));
     }
 
     synchronized public QueryRegistryEntry abortQuery(String key) {
@@ -40,6 +37,7 @@ public class QueryRegistryExtension extends Observable implements Lifecycle
         entry.kill();
         log.warn("aborted query for key " + key);
         forceNotifyObservers(new QueryAbortedEvent(entry));
+        unregisterQuery(entry);
         return entry;
     }
 

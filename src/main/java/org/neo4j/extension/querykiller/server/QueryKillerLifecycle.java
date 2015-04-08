@@ -5,12 +5,15 @@ import org.neo4j.extension.querykiller.filter.LegacyCypherQueryKillerFilter;
 import org.neo4j.extension.querykiller.filter.TransactionalCypherQueryKillerFilter;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.server.AbstractNeoServer;
 import org.neo4j.server.NeoServer;
+import org.neo4j.server.rest.transactional.TransactionFacade;
 import org.neo4j.server.rest.transactional.TransactionRegistry;
 import org.neo4j.server.web.WebServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Field;
 import java.util.Collections;
 
 public class QueryKillerLifecycle extends DepenceyResolverAwareLifecycle {
@@ -29,13 +32,24 @@ public class QueryKillerLifecycle extends DepenceyResolverAwareLifecycle {
         final GraphDatabaseService graphDatabaseService = neoServer.getDatabase().getGraph();
 
         TransactionRegistry transactionRegistry =  neoServer.getTransactionRegistry();
+        TransactionFacade transactionFacade = getTransactionFacade(neoServer);
 
         // wrap filter around legacy cypher endpoint
         webServer.addFilter(new LegacyCypherQueryKillerFilter(queryRegistryExtension, graphDatabaseService), "/cypher");
 
-        TransactionalCypherQueryKillerFilter transactionalCypherQueryKillerFilter = new TransactionalCypherQueryKillerFilter(queryRegistryExtension, graphDatabaseService, transactionRegistry);
+        TransactionalCypherQueryKillerFilter transactionalCypherQueryKillerFilter = new TransactionalCypherQueryKillerFilter(queryRegistryExtension, graphDatabaseService, transactionRegistry, transactionFacade);
         webServer.addFilter(transactionalCypherQueryKillerFilter, "/transaction/*");
 //        webServer.addFilter(transactionalCypherQueryKillerFilter, "/transaction"); // "/*" for catch all
+    }
+
+    protected TransactionFacade getTransactionFacade(NeoServer neoServer) {
+        try {
+            Field transactionFacadeField = AbstractNeoServer.class.getDeclaredField("transactionFacade");
+            transactionFacadeField.setAccessible(true);
+            return (TransactionFacade) transactionFacadeField.get(neoServer);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 
 }

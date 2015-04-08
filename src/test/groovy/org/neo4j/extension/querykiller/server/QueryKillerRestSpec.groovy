@@ -224,6 +224,10 @@ class QueryKillerRestSpec extends Specification {
     @Unroll
     def "should transactional endpoint work with multiple requests per transaction"() {
 
+        setup:
+        assert countObserver.counters.every { it.value == 0 }
+        def thread
+
         when:
         def response = neo4j.http.POST(initialURL) //, createJsonForTransactionalEndpoint(["MATCH (n) RETURN count(n)"] ))
 
@@ -231,20 +235,70 @@ class QueryKillerRestSpec extends Specification {
         response.status() == 201
 
         when:
-
         def location = response.header("Location")
         def url = location - neo4j.baseUrl
-        response = neo4j.http.withHeaders("X-Delay", "1000").POST(url + "/commit", createJsonForTransactionalEndpoint(["MATCH (n) RETURN count(n)"] ))
+        thread = Thread.start { neo4j.http.POST(url + "/commit", createJsonForTransactionalEndpoint(["foreach (x in range(0,100000) | merge (n:Person{name:'Person'+x}))"] )) }
+
+        sleepUntil { countObserver.counters[QueryRegisteredEvent.class] == 2 }
+
+        and: "check query list"
+        response = neo4j.http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
 
         then:
         response.status() == 200
+        response.content().size() == 1
+
+        when:
+        def key = response.content()[0].key
+        neo4j.http.DELETE("$MOUNTPOINT/$key")
+
+        then:
+        def e = thrown(UniformInterfaceException) // it's weird but a 204 is wrapped into an exception
+        e.response.status == 204
 
         where:
 
         initialURL | dummy
         "db/data/transaction" | true
         "db/data/transaction/" | true
+
+//        cleanup:
+//        synchronized (this) {
+//            thread.wait(5000)
+//        }
+//>>>>>>> Stashed changes
     }
+
+    def "should transactional endpoint work with payload upon first request"() {
+
+        setup:
+        def numberOfQueries = 1
+        def threads = (0..<numberOfQueries).collect {
+            Thread.start {
+                neo4j.http.POST("db/data/transaction", createJsonForTransactionalEndpoint(["foreach (x in range(0,100000) | merge (n:Person{name:'Person'+x}))"]))
+            }
+        }
+        sleepUntil { countObserver.counters[QueryRegisteredEvent.class] == numberOfQueries }
+
+        when: "check query list"
+        def response = neo4j.http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
+
+        then:
+        response.status() == 200
+        response.content().size() == 1
+
+        when:
+        def key = response.content()[0].key
+        neo4j.http.DELETE("$MOUNTPOINT/$key")
+
+        then:
+        def e = thrown(UniformInterfaceException) // it's weird but a 204 is wrapped into an exception
+        e.response.status == 204
+
+        cleanup:
+        threads.each{it.join(5000)}
+    }
+
 
     Closure runCypherQueryViaLegacyEndpoint = { delay ->
         neo4j.http.withHeaders("X-Delay", delay as String).POST("db/data/cypher", [
