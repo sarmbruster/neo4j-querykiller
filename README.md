@@ -62,7 +62,7 @@ Kill the query by using the 'key' value from the previous query:
     
 ### statistics
     
-Querykiller implements the observer pattern. One observer is statistics.
+Querykiller implements the observer pattern. One observer is statistics. Using config option `extension.statistics.enabled=false` in `neo4j.properties` this can be switched off.
 
 Get a list of all queries run so far:
 

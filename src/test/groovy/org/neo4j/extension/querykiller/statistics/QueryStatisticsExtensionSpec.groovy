@@ -1,6 +1,8 @@
 package org.neo4j.extension.querykiller.statistics
 
 import org.neo4j.extension.querykiller.events.QueryUnregisteredEvent
+import org.neo4j.helpers.collection.MapUtil
+import org.neo4j.kernel.configuration.Config
 import spock.lang.Specification
 
 class QueryStatisticsExtensionSpec extends Specification {
@@ -8,7 +10,7 @@ class QueryStatisticsExtensionSpec extends Specification {
     def "should query statistics be empty on fresh instance"() {
 
         setup:
-        def qse = new QueryStatisticsExtension(null)
+        def qse = new QueryStatisticsExtension(null, new Config())
 
         expect:
         qse.statistics.size() == 0
@@ -18,7 +20,7 @@ class QueryStatisticsExtensionSpec extends Specification {
 
         setup:
         Observable observable = new Observable();
-        def qse = new QueryStatisticsExtension(observable)
+        def qse = new QueryStatisticsExtension(observable, new Config())
         qse.init()
 
         when:
@@ -57,6 +59,22 @@ class QueryStatisticsExtensionSpec extends Specification {
         qse.statistics[cypher].durations.keySet()[0] == entry.started
         qse.statistics[cypher].total == qse.statistics[cypher].durations.values().sum()
 
+    }
+
+    def "should statistics be disabled by config"() {
+        setup:
+        Observable observable = new Observable();
+        def qse = new QueryStatisticsExtension(observable, new Config(MapUtil.stringMap("extension.statistics.enabled", "false")))
+        qse.init()
+
+        when:
+        def cypher = "MATCH (n) RETURN n"
+        def entry = new org.neo4j.extension.querykiller.QueryRegistryEntry(null, cypher, null, null,  null)
+        observable.setChanged()
+        observable.notifyObservers(new QueryUnregisteredEvent(entry))
+
+        then:
+        qse.statistics.size() == 0
     }
 
 }
