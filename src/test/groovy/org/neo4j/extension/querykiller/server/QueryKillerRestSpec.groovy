@@ -296,6 +296,50 @@ class QueryKillerRestSpec extends Specification {
         threads.each{it.join(5000)}
     }
 
+    def "should 'since' time be accurate"() {
+        setup:
+        def numberOfQueries = 10
+        def waitTime = 1000 // 1 sec
+        def threads = (0..<numberOfQueries).collect {
+            Thread.start {
+                neo4j.http.POST("db/data/transaction", createJsonForTransactionalEndpoint(["foreach (x in range(0,100000) | merge (n:Person{name:'Person'+x}))"]))
+            }
+        }
+        sleepUntil { countObserver.counters[QueryRegisteredEvent.class] == numberOfQueries }
+        sleep waitTime
+
+        when:
+        def response = neo4j.http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
+
+        then:
+        response.status() == 200
+        response.content().size() == numberOfQueries
+
+        and: "since time is longer than wait time"
+        response.content().every { it.since > waitTime }
+
+        when: "killing all queries"
+        response.content().each {
+            def key = it.key
+            try {
+                neo4j.http.DELETE("$MOUNTPOINT/$key")
+            } catch (UniformInterfaceException e) {
+                // pass
+            }
+        }
+        sleepUntil { countObserver.counters[QueryUnregisteredEvent.class] == numberOfQueries }
+
+        and:
+        response = neo4j.http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
+
+        then:
+        response.status() == 200
+        response.content().size() == 0
+
+        cleanup:
+        threads.each {it.join()}
+
+    }
 
     Closure runCypherQueryViaLegacyEndpoint = { delay ->
         neo4j.http.withHeaders("X-Delay", delay as String).POST("db/data/cypher", [
