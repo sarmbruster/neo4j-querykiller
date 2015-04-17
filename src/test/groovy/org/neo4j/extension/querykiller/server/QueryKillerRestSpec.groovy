@@ -168,11 +168,11 @@ class QueryKillerRestSpec extends Specification {
 
         when:
         def key = response.content()[0].key
-        neo4j.http.DELETE("$MOUNTPOINT/$key")
+        response = neo4j.http.DELETE("$MOUNTPOINT/$key")
 
-        then: "delete operation returned 204"
-        def e = thrown(UniformInterfaceException) // it's weird but a 204 is wrapped into an exception
-        e.response.status == 204
+        then: "delete operation gives 200"
+        response.status() == 200
+        response.content().deleted == key
 
         when: "check query list again"
         sleepUntil { (countObserver.counters[QueryAbortedEvent.class] == 1) &&
@@ -188,6 +188,13 @@ class QueryKillerRestSpec extends Specification {
 
         and: "delay did not time out since we've aborted the query"
         System.currentTimeMillis() - now < delay
+
+        when: "deleting the same query again"
+        neo4j.http.DELETE("$MOUNTPOINT/$key")
+
+        then: "gives a 204"
+        def e = thrown(UniformInterfaceException) // it's weird but a 204 is wrapped into an exception
+        e.response.status == 204
 
         cleanup:
         threads.each { it.join() }
@@ -250,11 +257,11 @@ class QueryKillerRestSpec extends Specification {
 
         when:
         def key = response.content()[0].key
-        neo4j.http.DELETE("$MOUNTPOINT/$key")
+        response = neo4j.http.DELETE("$MOUNTPOINT/$key")
 
         then:
-        def e = thrown(UniformInterfaceException) // it's weird but a 204 is wrapped into an exception
-        e.response.status == 204
+        response.status() == 200
+        response.content().deleted == key
 
         where:
         initialURL             | amend2ndRequest
@@ -286,11 +293,11 @@ class QueryKillerRestSpec extends Specification {
 
         when:
         def key = response.content()[0].key
-        neo4j.http.DELETE("$MOUNTPOINT/$key")
+        response = neo4j.http.DELETE("$MOUNTPOINT/$key")
 
         then:
-        def e = thrown(UniformInterfaceException) // it's weird but a 204 is wrapped into an exception
-        e.response.status == 204
+        response.status() == 200
+        response.content().deleted == key
 
         cleanup:
         threads.each{it.join(5000)}

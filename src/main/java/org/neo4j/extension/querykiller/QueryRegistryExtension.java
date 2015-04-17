@@ -54,7 +54,7 @@ public class QueryRegistryExtension extends Observable implements Lifecycle
                 return entry;
             }
         }
-        throw new IllegalArgumentException("no query running with key " + key);
+        throw new NoSuchQueryException(key);
     }
 
     public SortedSet<QueryRegistryEntry> getRunningQueries() {

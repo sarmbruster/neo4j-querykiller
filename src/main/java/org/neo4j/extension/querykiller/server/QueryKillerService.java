@@ -1,8 +1,10 @@
 package org.neo4j.extension.querykiller.server;
 
 import org.codehaus.jackson.map.ObjectMapper;
+import org.neo4j.extension.querykiller.NoSuchQueryException;
 import org.neo4j.extension.querykiller.QueryRegistryEntry;
 import org.neo4j.extension.querykiller.QueryRegistryExtension;
+import org.neo4j.helpers.collection.MapUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +59,12 @@ public class QueryKillerService {
 
     @DELETE
     @Path("/{queryKey}")
-    public void killQuery(@PathParam("queryKey") String queryKey) {
-        queryRegistryExtension.abortQuery(queryKey);
+    public Map<String,String> killQuery(@PathParam("queryKey") String queryKey) {
+        try {
+            queryRegistryExtension.abortQuery(queryKey);
+            return MapUtil.stringMap("deleted", queryKey);
+        } catch (NoSuchQueryException e) {  // TODO: consider a more JAX-RS like approach for mapping exception to responses
+            return null;
+        }
     }
 }

@@ -78,7 +78,7 @@ class QueryRegistryExtensionSpec extends Specification
         queryRegistryExtension.abortQuery(q2.key)
 
         then:
-        thrown IllegalArgumentException
+        thrown NoSuchQueryException
     }
 
     def "tabular output matches table structure"() {
