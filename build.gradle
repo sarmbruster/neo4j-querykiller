@@ -4,13 +4,13 @@ apply plugin: "groovy"
 apply plugin: "idea"
 idea {
     project {
-        ext.jdkName = '1.7'
-        ext.languageLevel = '1.7'
+        ext.jdkName = '1.8'
+        ext.languageLevel = '1.8'
     }
 }
 
-sourceCompatibility=JavaVersion.VERSION_1_7
-targetCompatibility=JavaVersion.VERSION_1_7
+sourceCompatibility=JavaVersion.VERSION_1_8
+targetCompatibility=JavaVersion.VERSION_1_8
 
 repositories {
     mavenCentral()
@@ -27,8 +27,8 @@ configurations {
 }
 
 ext {
-    neo4jVersion = "2.2.0"
-    jerseyVersion = "1.18.1"
+    neo4jVersion = "2.3.2"
+    jerseyVersion = "1.19"
 }
 
 dependencies {
@@ -36,7 +36,7 @@ dependencies {
     compile group: 'org.neo4j', name: 'neo4j-lucene-index', version: neo4jVersion
     compile group: 'org.neo4j', name: 'server-api', version: neo4jVersion
     compile group: 'org.neo4j.app', name: 'neo4j-server', version: neo4jVersion
-    testCompile group: 'org.neo4j.contrib', name: 'neo4j-spock-extension', version: '0.5.2'
+    testCompile group: 'org.neo4j.contrib', name: 'neo4j-spock-extension', version: '0.6.0'
     runtime 'org.glassfish.jersey.media:jersey-media-json-jackson:2.13'
 
     fat 'org.glassfish.jersey.media:jersey-media-json-jackson:2.13'

@@ -9,7 +9,7 @@ import org.neo4j.extension.querykiller.events.QueryRegisteredEvent
 import org.neo4j.extension.querykiller.events.QueryUnregisteredEvent
 import org.neo4j.extension.querykiller.helper.CounterObserver
 import org.neo4j.extension.spock.Neo4jServerResource
-import org.neo4j.test.Mute
+import org.neo4j.test.SuppressOutput
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -26,7 +26,7 @@ class QueryKillerRestSpec extends Specification {
 
     @Shared
     @ClassRule
-    Mute mute = Mute.muteAll()
+    SuppressOutput suppressOutput = SuppressOutput.suppressAll()
 
     @Shared
     @ClassRule Neo4jServerResource neo4j = new Neo4jServerResource(
