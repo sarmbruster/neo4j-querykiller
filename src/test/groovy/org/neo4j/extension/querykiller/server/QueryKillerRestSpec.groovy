@@ -31,9 +31,7 @@ class QueryKillerRestSpec extends Specification {
     @Shared
     @ClassRule Neo4jServerResource neo4j = new Neo4jServerResource(
             config: [
-                    cache_type: "none",
                     "dbms.pagecache.memory": "1M"
-
             ],
             thirdPartyJaxRsPackages: [
                     "org.neo4j.extension.querykiller.server": "/$MOUNTPOINT",
@@ -51,6 +49,7 @@ class QueryKillerRestSpec extends Specification {
     }
 
     def cleanup() {
+        neo4j.closeCypher()
         observable.deleteObserver(countObserver)
     }
 
@@ -105,7 +104,7 @@ class QueryKillerRestSpec extends Specification {
     def "send #numberOfQueries queries in parallel with delay #delay [ms] and check if registry handles this correctly"() {
 
         setup:
-        log.error "running with $numberOfQueries"
+//        log.error "running with $numberOfQueries"
         assert countObserver.counters.every { it.value == 0 }
         def threads =  (0..<numberOfQueries).collect { Thread.start runCypherQueryViaLegacyEndpoint.curry(delay) }
         sleepUntil { countObserver.counters[QueryRegisteredEvent.class] == numberOfQueries}
@@ -344,7 +343,7 @@ class QueryKillerRestSpec extends Specification {
         response.content().size() == 0
 
         cleanup:
-        threads.each {it.join()}
+        threads.each {it.join(5000)}
 
     }
 

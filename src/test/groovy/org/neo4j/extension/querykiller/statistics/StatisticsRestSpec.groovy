@@ -12,7 +12,6 @@ class StatisticsRestSpec extends Specification {
 
     @Shared
     @ClassRule Neo4jServerResource neo4j = new Neo4jServerResource(
-            config: [ execution_guard_enabled: "true" ],
             thirdPartyJaxRsPackages: [
                     "org.neo4j.extension.querykiller.server": "/notrelevant",
                     "org.neo4j.extension.querykiller.statistics": "/$MOUNTPOINT"
@@ -41,7 +40,6 @@ class StatisticsRestSpec extends Specification {
         when: "submit another cypher query"
         neo4j.http.POST("db/data/cypher", [query: cypher])
         response = neo4j.http.GET(MOUNTPOINT)
-        println response.content()
 
         then:
         response.status() == 200
