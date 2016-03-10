@@ -21,22 +21,23 @@ repositories {
 
 configurations {
     fat {
-        description = "farjar"
+        description = "fatjar"
         transitive = true
     }
 }
 
 ext {
-    neo4jVersion = "2.3.2"
+    neo4jVersion = "3.0.0-M05"
     jerseyVersion = "1.19"
 }
 
 dependencies {
     compile group: 'org.neo4j', name: 'neo4j-kernel', version: neo4jVersion
+    compile group: 'org.neo4j', name: 'neo4j-common', version: neo4jVersion
     compile group: 'org.neo4j', name: 'neo4j-lucene-index', version: neo4jVersion
     compile group: 'org.neo4j', name: 'server-api', version: neo4jVersion
     compile group: 'org.neo4j.app', name: 'neo4j-server', version: neo4jVersion
-    testCompile group: 'org.neo4j.contrib', name: 'neo4j-spock-extension', version: '0.6.0'
+    testCompile group: 'org.neo4j.contrib', name: 'neo4j-spock-extension', version: '0.7.1'
     runtime 'org.glassfish.jersey.media:jersey-media-json-jackson:2.13'
 
     fat 'org.glassfish.jersey.media:jersey-media-json-jackson:2.13'
