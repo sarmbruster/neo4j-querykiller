@@ -2,6 +2,7 @@ package org.neo4j.extension.querykiller
 
 import org.junit.ClassRule
 import org.neo4j.extension.querykiller.events.QueryRegisteredEvent
+import org.neo4j.extension.querykiller.events.QueryUnregisteredEvent
 import org.neo4j.extension.querykiller.helper.CounterObserver
 import org.neo4j.extension.spock.Neo4jServerResource
 import org.neo4j.jmx.JmxUtils
@@ -18,7 +19,6 @@ class JMXSpec extends Specification {
 
     @Shared
     @ClassRule Neo4jServerResource neo4j = new Neo4jServerResource(
-            config: [ execution_guard_enabled: "true" ],
             thirdPartyJaxRsPackages: [
                     "org.neo4j.extension.querykiller.server": "/notrelevant",
                     "org.neo4j.extension.querykiller.statistics": "/$MOUNTPOINT"
@@ -54,6 +54,8 @@ class JMXSpec extends Specification {
 
         then:
         count > 0
-    }
 
+        cleanup:
+        sleepUntil { countObserver.counters[QueryUnregisteredEvent.class] == 1}
+    }
 }
