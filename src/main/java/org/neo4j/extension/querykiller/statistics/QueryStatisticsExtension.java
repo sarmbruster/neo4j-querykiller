@@ -3,7 +3,7 @@ package org.neo4j.extension.querykiller.statistics;
 import org.neo4j.extension.querykiller.QueryRegistryEntry;
 import org.neo4j.extension.querykiller.events.QueryUnregisteredEvent;
 import org.neo4j.graphdb.config.Setting;
-import org.neo4j.helpers.Settings;
+import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 import org.slf4j.Logger;

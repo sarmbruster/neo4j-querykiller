@@ -8,6 +8,7 @@ import org.neo4j.extension.querykiller.QueryRegistryExtension;
 import org.neo4j.extension.querykiller.http.CopyHttpServletRequest;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.api.AccessMode;
 import org.neo4j.server.rest.transactional.ExecutionResultSerializer;
 import org.neo4j.server.rest.transactional.TransactionFacade;
 import org.neo4j.server.rest.transactional.TransactionHandle;
@@ -218,7 +219,7 @@ public class TransactionalCypherQueryKillerFilter implements Filter {
             // and register that one with our QueryRegistry
             QueryRegistryEntry queryRegistryEntry = null;
             try {
-                TransactionHandle transactionHandle = transactionFacade.newTransactionHandle(new UriBuilder(request));
+                TransactionHandle transactionHandle = transactionFacade.newTransactionHandle(new UriBuilder(request), false, AccessMode.FULL);
 
                 queryRegistryEntry = queryRegistryExtension.registerQuery(new TransactionalEndpointTransactionWrapper(transactionRegistry, (Long) transactionHandleIdField.get(transactionHandle)), cypher, request.getRequestURI(), request.getRemoteHost(), request.getRemoteUser());
 

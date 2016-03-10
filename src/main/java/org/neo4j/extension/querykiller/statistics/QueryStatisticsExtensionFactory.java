@@ -5,7 +5,7 @@ import org.neo4j.helpers.Service;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.extension.KernelExtensions;
-import org.neo4j.kernel.guard.Guard;
+import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
 @Service.Implementation(KernelExtensionFactory.class)
@@ -25,7 +25,7 @@ public class QueryStatisticsExtensionFactory extends KernelExtensionFactory<Quer
     }
 
     @Override
-    public Lifecycle newKernelExtension(final Dependencies dependencies) throws Throwable {
+    public Lifecycle newInstance(KernelContext context, final Dependencies dependencies) throws Throwable {
         KernelExtensions kernelExtensions = dependencies.getKernelExtensions();
         return new QueryStatisticsExtension(kernelExtensions.resolveDependency(QueryRegistryExtension.class), dependencies.getConfig());
 

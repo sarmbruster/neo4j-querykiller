@@ -41,11 +41,6 @@ public class TransactionalEndpointTransactionWrapper implements Transaction {
     }
 
     @Override
-    public void finish() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public void close() {
         throw new UnsupportedOperationException();
     }
