@@ -1,13 +1,13 @@
 package org.neo4j.extension.querykiller.statistics;
 
-import org.neo4j.extension.querykiller.server.DepenceyResolverAwareLifecycle;
+import org.neo4j.extension.querykiller.server.DependencyResolverAwareLifecycle;
 import org.neo4j.graphdb.DependencyResolver;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.web.WebServer;
 
 import java.util.Collections;
 
-public class StatisticsLifecylce extends DepenceyResolverAwareLifecycle {
+public class StatisticsLifecylce extends DependencyResolverAwareLifecycle {
 
     @Override
     protected Iterable<? extends Class> dependenciesToInject() {

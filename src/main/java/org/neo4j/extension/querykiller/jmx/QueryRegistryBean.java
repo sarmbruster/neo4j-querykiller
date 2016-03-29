@@ -1,8 +1,8 @@
 package org.neo4j.extension.querykiller.jmx;
 
 import org.apache.commons.beanutils.BeanUtils;
-import org.neo4j.extension.querykiller.QueryRegistryEntry;
 import org.neo4j.extension.querykiller.QueryRegistryExtension;
+import org.neo4j.extension.querykiller.TransactionEntry;
 import org.neo4j.extension.querykiller.statistics.QueryStat;
 import org.neo4j.extension.querykiller.statistics.QueryStatisticsExtension;
 import org.neo4j.helpers.Service;
@@ -43,13 +43,13 @@ public class QueryRegistryBean extends ManagementBeanProvider {
 
         @Override
         public int getRunningQueriesCount() {
-            return queryRegistryExtension.getRunningQueries().size();
+            return queryRegistryExtension.getTransactionEntryMap().size();
         }
 
         @Override
         public Collection<Map<String, Object>> getRunningQueries() {
             Collection<Map<String,Object>> retVal = new ArrayList<>();
-            for (QueryRegistryEntry entry: queryRegistryExtension.getRunningQueries()) {
+            for (TransactionEntry entry: queryRegistryExtension.getTransactionEntryMap()) {
                 try {
                     retVal.add(BeanUtils.describe(entry));
                 } catch (Exception e) {

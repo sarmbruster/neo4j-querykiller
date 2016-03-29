@@ -1,14 +1,25 @@
 package org.neo4j.extension.querykiller.server
 
+import com.google.common.eventbus.EventBus
+import com.google.common.eventbus.Subscribe
 import com.sun.jersey.api.client.UniformInterfaceException
 import groovy.util.logging.Slf4j
 import org.junit.ClassRule
+import org.junit.rules.RuleChain
+import org.neo4j.extension.querykiller.EventBusLifecycle
 import org.neo4j.extension.querykiller.QueryRegistryExtension
-import org.neo4j.extension.querykiller.events.QueryAbortedEvent
-import org.neo4j.extension.querykiller.events.QueryRegisteredEvent
-import org.neo4j.extension.querykiller.events.QueryUnregisteredEvent
-import org.neo4j.extension.querykiller.helper.CounterObserver
+import org.neo4j.extension.querykiller.agent.WrapNeo4jComponentsAgent
+import org.neo4j.extension.querykiller.events.cypher.CypherContext
+import org.neo4j.extension.querykiller.events.cypher.ResetCypherContext
+import org.neo4j.extension.querykiller.events.query.QueryAbortedEvent
+import org.neo4j.extension.querykiller.events.query.QueryRegisteredEvent
+import org.neo4j.extension.querykiller.events.query.QueryUnregisteredEvent
+import org.neo4j.extension.querykiller.events.transport.HttpContext
+import org.neo4j.extension.querykiller.events.transport.ResetHttpContext
+import org.neo4j.extension.querykiller.helper.AgentRule
+import org.neo4j.extension.querykiller.helper.EventCounters
 import org.neo4j.extension.spock.Neo4jServerResource
+import org.neo4j.extension.spock.Neo4jUtils
 import org.neo4j.test.SuppressOutput
 import spock.lang.Shared
 import spock.lang.Specification
@@ -25,35 +36,67 @@ class QueryKillerRestSpec extends Specification {
     public static final String MOUNTPOINT = "querykiller"
 
     @Shared
-    @ClassRule
-    SuppressOutput suppressOutput = SuppressOutput.suppressAll()
-
-    @Shared
-    @ClassRule Neo4jServerResource neo4j = new Neo4jServerResource(
+    Neo4jServerResource neo4j = new Neo4jServerResource(
             config: [
                     "dbms.pagecache.memory": "1M"
             ],
             thirdPartyJaxRsPackages: [
                     "org.neo4j.extension.querykiller.server": "/$MOUNTPOINT",
-                    "org.neo4j.extension.querykiller.helper": "/$MOUNTPOINT",
             ]
     )
 
-    Observable observable
-    CounterObserver countObserver
+    @Shared
+    @ClassRule
+    RuleChain ruleChain = RuleChain.outerRule(new AgentRule(WrapNeo4jComponentsAgent))
+            .around(SuppressOutput.suppressAll())   // comment this out for debugging
+            .around(neo4j)
+
+    @Shared
+    EventBus eventBus
+    EventCounters eventCounters
+
+    def setupSpec() {
+        def resolver = neo4j.server.getDatabase().getGraph().getDependencyResolver()
+
+        eventBus = resolver.resolveDependency(EventBusLifecycle.class)
+        // enable this for event debugging
+/*
+        eventBus.register(new Object() {
+            @Subscribe
+            public void printit(Object o) {
+                log.error "event $o"
+            }
+        })
+*/
+    }
 
     def setup() {
-        observable = neo4j.server.getDatabase().getGraph().getDependencyResolver().resolveDependency(QueryRegistryExtension.class)
-        countObserver = new CounterObserver()
-        observable.addObserver(countObserver)
+        log.error "setup: $specificationContext.currentFeature.name"
+        eventCounters = new EventCounters()
+        eventBus.register(eventCounters)
+
+        def resolver = neo4j.server.getDatabase().getGraph().getDependencyResolver()
+        QueryRegistryExtension queryRegistryExtension = resolver.resolveDependency(QueryRegistryExtension)
+        assert queryRegistryExtension.transactionEntryMap.size() == 0
     }
 
     def cleanup() {
         neo4j.closeCypher()
-        observable.deleteObserver(countObserver)
+        eventBus.unregister(eventCounters)
+        try {
+            sleepUntil { eventCounters.counters[HttpContext] == eventCounters.counters[ResetHttpContext]}
+            sleepUntil { eventCounters.counters[CypherContext] == eventCounters.counters[ResetCypherContext]}
+
+        } catch (TimeoutException e) {
+            log.error("timeoutException: $eventCounters.counters")
+            throw e
+        }
+        log.info "cleanup for $specificationContext.currentFeature.name "
+        Neo4jUtils.assertNoOpenTransaction(neo4j.graphDatabaseService)
+        log.error "done: $specificationContext.currentFeature.name"
     }
 
-    def "send cypher query"() {
+    def "cypher query is registered and unregistersed"() {
         when:
         def json = [
                 query: "MATCH (n) RETURN count(n) AS c",
@@ -67,47 +110,51 @@ class QueryKillerRestSpec extends Specification {
         response.content().columns[0] == "c"
         response.content().data[0][0] == 0
 
+        and:
+        eventCounters.counters[QueryRegisteredEvent] == 1
+
         cleanup:
-        sleepUntil { countObserver.counters[QueryUnregisteredEvent.class] == 1}
+        sleepUntil { eventCounters.counters[QueryUnregisteredEvent] == 1}
     }
 
-    def "send cypher query with delay"() {
+    def "procedure 'sleep' works as expected"() {
 
         when:
-        def json = [
-                query: "MATCH (n) RETURN count(n) AS c",
-        ]
         def delay = 100
+        def json = [
+                query: "CALL org.neo4j.extension.querykiller.helper.sleep($delay)".toString(),
+        ]
 
         def now = System.currentTimeMillis()
-        def response = neo4j.http
-                .withHeaders("X-Delay", delay as String)
-                .POST("db/data/cypher", json)
+        def response = neo4j.http.POST("db/data/cypher", json)
         def duration = System.currentTimeMillis() - now
 
         then:
         response.status() == 200
 
         and:
-        response.content().columns[0] == "c"
-        response.content().data[0][0] == 0
+        response.content().data.size() == 0
 
         and:
         duration > delay
 
         cleanup:
-        sleepUntil { countObserver.counters[QueryUnregisteredEvent.class] == 1}
-
+        sleepUntil { eventCounters.counters[ResetHttpContext] == 1}
     }
 
     @Unroll
     def "send #numberOfQueries queries in parallel with delay #delay [ms] and check if registry handles this correctly"() {
 
         setup:
-//        log.error "running with $numberOfQueries"
-        assert countObserver.counters.every { it.value == 0 }
-        def threads =  (0..<numberOfQueries).collect { Thread.start runCypherQueryViaLegacyEndpoint.curry(delay) }
-        sleepUntil { countObserver.counters[QueryRegisteredEvent.class] == numberOfQueries}
+        assert eventCounters.counters.every { it.value == 0 }
+        def procedureStatement = "CALL org.neo4j.extension.querykiller.helper.sleep($delay)".toString()
+        def threads =  (0..<numberOfQueries).collect {
+            Thread.start {
+                neo4j.http.POST("db/data/transaction/commit",
+                        createJsonForTransactionalEndpoint([procedureStatement]))
+                }
+        }
+        sleepUntil { eventCounters.counters[QueryRegisteredEvent.class] == numberOfQueries}
 
         when: "check query list"
         def response = neo4j.http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
@@ -120,7 +167,7 @@ class QueryKillerRestSpec extends Specification {
         response.content().size() <= numberOfQueries
 
         when:
-        sleepUntil { countObserver.counters[QueryUnregisteredEvent.class] == numberOfQueries}
+        sleepUntil { eventCounters.counters[QueryUnregisteredEvent.class] == numberOfQueries}
 
         response = neo4j.http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
 
@@ -144,28 +191,36 @@ class QueryKillerRestSpec extends Specification {
         1000            | 50
     }
 
+    //@Ignore
     def "send query with delay and terminate it"() {
         setup:
-        assert countObserver.counters.every { it.value == 0 }
         def now = System.currentTimeMillis()
         def delay = 5000
-        def threads =  (0..<1).collect { Thread.start runCypherQueryViaLegacyEndpoint.curry(delay) }
-        sleepUntil { countObserver.counters[QueryRegisteredEvent.class] == 1}
+        def procedureStatement = "CALL org.neo4j.extension.querykiller.helper.sleep($delay)".toString()
+        def threads =  (0..<1).collect {
+            Thread.start {
+                neo4j.http.POST("db/data/transaction/commit",
+                        createJsonForTransactionalEndpoint([procedureStatement]))
+                }
+        }
+        sleepUntil { eventCounters.counters[QueryRegisteredEvent.class] == 1}
 
         when: "check query list"
         def response = neo4j.http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
+        log.info("status called")
 
         then:
         response.status() == 200
 
         and:
-        countObserver.counters[QueryUnregisteredEvent.class] == 0
+        eventCounters.counters[QueryUnregisteredEvent.class] == 0
 
         and:
         response.content().size() == 1
-        response.content()[0].cypher == "MATCH (n) RETURN count(n) AS c"
+        response.content()[0].context == procedureStatement
 
         when:
+        sleep(200)
         def key = response.content()[0].key
         response = neo4j.http.DELETE("$MOUNTPOINT/$key")
 
@@ -174,8 +229,8 @@ class QueryKillerRestSpec extends Specification {
         response.content().deleted == key
 
         when: "check query list again"
-        sleepUntil { (countObserver.counters[QueryAbortedEvent.class] == 1) &&
-             (countObserver.counters[QueryUnregisteredEvent.class] == 1)
+        sleepUntil { (eventCounters.counters[QueryAbortedEvent.class] == 1) &&
+             (eventCounters.counters[QueryUnregisteredEvent.class] == 1)
         }
         response = neo4j.http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
 
@@ -185,33 +240,50 @@ class QueryKillerRestSpec extends Specification {
         and:
         response.content().size() == 0
 
-        and: "delay did not time out since we've aborted the query"
-        System.currentTimeMillis() - now < delay
+//        and: "delay did not time out since we've aborted the query"
+//        System.currentTimeMillis() - now < delay
 
-        when: "deleting the same query again"
+        /*when: "deleting the same query again"
         neo4j.http.DELETE("$MOUNTPOINT/$key")
 
         then: "gives a 204"
         def e = thrown(UniformInterfaceException) // it's weird but a 204 is wrapped into an exception
-        e.response.status == 204
+        e.response.status == 204*/
 
         cleanup:
         threads.each { it.join() }
+
+        sleepUntil {
+            try {
+                Neo4jUtils.assertNoOpenTransaction(neo4j.graphDatabaseService)
+                true
+            } catch (IllegalStateException ex) {
+                false
+            }
+        }
     }
 
     def "queries on transactional endpoint are monitored"() {
         setup:
 
         def numberOfQueries = 1
-        def threads =  (0..<numberOfQueries).collect { Thread.start runCypherQueryViaTransactionalEndpoint.curry(20, ["CREATE (n) return n", "MATCH (n) RETURN count(n) AS c"]) }
-
-        try {
-            sleepUntil { countObserver.counters[QueryRegisteredEvent.class] == numberOfQueries}
-        } catch (TimeoutException e) {
-            log.error "counters: $countObserver.counters"
-            throw e
+        def threads =  (0..<numberOfQueries).collect {
+            Thread.start {
+                neo4j.http.POST("db/data/transaction/commit",
+                        createJsonForTransactionalEndpoint([
+                                "CREATE (n) return n",
+                                "MATCH (n) RETURN count(n) AS c",
+                                "CALL org.neo4j.extension.querykiller.helper.sleep(200)"
+                        ]))
+                }
         }
 
+        try {
+            sleepUntil { eventCounters.counters[CypherContext.class] == 3}
+        } catch (TimeoutException e) {
+            log.error "counters: $eventCounters.counters"
+            throw e
+        }
 
         when: "check query list"
         def response = neo4j.http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
@@ -221,7 +293,8 @@ class QueryKillerRestSpec extends Specification {
 
         and:
         response.content().size() == 1
-        response.content()[0].cypher == '["CREATE (n) return n", "MATCH (n) RETURN count(n) AS c"]'
+        response.content()[0].context == "CALL org.neo4j.extension.querykiller.helper.sleep(200)"
+        response.content()[0].endPoint == "/db/data/transaction/commit"
 
         cleanup:
         threads.each { it.join() }
@@ -231,11 +304,12 @@ class QueryKillerRestSpec extends Specification {
     def "should transactional endpoint work with transaction spawned over multiple requests"() {
 
         setup:
-        assert countObserver.counters.every { it.value == 0 }
+        assert eventCounters.counters.every { it.value == 0 }
         def thread
 
         when:
         def response = neo4j.http.POST(initialURL) //, createJsonForTransactionalEndpoint(["MATCH (n) RETURN count(n)"] ))
+        log.info "done initial"
 
         then:
         response.status() == 201
@@ -243,9 +317,13 @@ class QueryKillerRestSpec extends Specification {
         when:
         def location = response.header("Location")
         def url = location - neo4j.baseUrl
-        thread = Thread.start { neo4j.http.POST(url + amend2ndRequest, createJsonForTransactionalEndpoint(["foreach (x in range(0,100000) | merge (n:Person{name:'Person'+x}))"] )) }
+        thread = Thread.start {
+            log.info "start 2nd (from different thread)"
+            neo4j.http.POST(url + amend2ndRequest, createJsonForTransactionalEndpoint(["foreach (x in range(0,100000) | merge (n:Person{name:'Person'+x}))"] ))
+            log.info "done 2nd (from different thread)"
+        }
 
-        sleepUntil { countObserver.counters[QueryRegisteredEvent.class] == 2 }
+        sleepUntil { eventCounters.counters[QueryRegisteredEvent] == 2 }
 
         and: "check query list"
         response = neo4j.http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
@@ -261,6 +339,11 @@ class QueryKillerRestSpec extends Specification {
         then:
         response.status() == 200
         response.content().deleted == key
+
+        cleanup:
+        sleepUntil { eventCounters.counters[HttpContext] == eventCounters.counters[ResetHttpContext]  }
+        log.info "done with spec"
+
 
         where:
         initialURL             | amend2ndRequest
@@ -281,7 +364,7 @@ class QueryKillerRestSpec extends Specification {
                 neo4j.http.POST("db/data/transaction", createJsonForTransactionalEndpoint(["foreach (x in range(0,100000) | merge (n:Person{name:'Person'+x}))"]))
             }
         }
-        sleepUntil { countObserver.counters[QueryRegisteredEvent.class] == numberOfQueries }
+        sleepUntil { eventCounters.counters[QueryRegisteredEvent.class] == numberOfQueries }
 
         when: "check query list"
         def response = neo4j.http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
@@ -311,7 +394,7 @@ class QueryKillerRestSpec extends Specification {
                 neo4j.http.POST("db/data/transaction", createJsonForTransactionalEndpoint(["foreach (x in range(0,100000) | merge (n:Person{name:'Person'+x}))"]))
             }
         }
-        sleepUntil { countObserver.counters[QueryRegisteredEvent.class] == numberOfQueries }
+        sleepUntil { eventCounters.counters[QueryRegisteredEvent.class] == numberOfQueries }
         sleep waitTime
 
         when:
@@ -333,7 +416,7 @@ class QueryKillerRestSpec extends Specification {
                 // pass
             }
         }
-        sleepUntil { countObserver.counters[QueryUnregisteredEvent.class] == numberOfQueries }
+        sleepUntil { eventCounters.counters[QueryUnregisteredEvent.class] == numberOfQueries }
 
         and:
         response = neo4j.http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
@@ -347,7 +430,7 @@ class QueryKillerRestSpec extends Specification {
 
     }
 
-    Closure runCypherQueryViaLegacyEndpoint = { delay ->
+/*    Closure runCypherQueryViaLegacyEndpoint = { delay ->
         neo4j.http.withHeaders("X-Delay", delay as String).POST("db/data/cypher", [
                 query: "MATCH (n) RETURN count(n) AS c",
         ])
@@ -355,7 +438,7 @@ class QueryKillerRestSpec extends Specification {
 
     Closure runCypherQueryViaTransactionalEndpoint = { delay, statements, params = null ->
         neo4j.http.withHeaders("X-Delay", delay as String).POST("db/data/transaction/commit", createJsonForTransactionalEndpoint(statements, params))
-    }
+    }*/
 
     /**
      * create a collection structure fitting being suitable for json format used for

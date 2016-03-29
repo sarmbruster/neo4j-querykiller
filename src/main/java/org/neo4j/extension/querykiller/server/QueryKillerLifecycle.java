@@ -1,22 +1,22 @@
 package org.neo4j.extension.querykiller.server;
 
+import com.google.common.eventbus.EventBus;
+import org.neo4j.extension.querykiller.EventBusLifecycle;
 import org.neo4j.extension.querykiller.QueryRegistryExtension;
-import org.neo4j.extension.querykiller.filter.LegacyCypherQueryKillerFilter;
-import org.neo4j.extension.querykiller.filter.TransactionalCypherQueryKillerFilter;
 import org.neo4j.graphdb.DependencyResolver;
-import org.neo4j.graphdb.GraphDatabaseService;
-import org.neo4j.server.AbstractNeoServer;
 import org.neo4j.server.NeoServer;
-import org.neo4j.server.rest.transactional.TransactionFacade;
-import org.neo4j.server.rest.transactional.TransactionRegistry;
 import org.neo4j.server.web.WebServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Field;
 import java.util.Collections;
 
-public class QueryKillerLifecycle extends DepenceyResolverAwareLifecycle {
+/**
+ * 2 responsibilities:
+ * 1) expose QueryRegistryExtension as @Context for unmanaged extensions
+ * 2) register a servlet filter to expose current context (endpoint, user, etc.)
+ */
+public class QueryKillerLifecycle extends DependencyResolverAwareLifecycle {
 
     public final Logger log = LoggerFactory.getLogger(QueryKillerLifecycle.class);
 
@@ -28,28 +28,8 @@ public class QueryKillerLifecycle extends DepenceyResolverAwareLifecycle {
     @Override
     protected void start(NeoServer neoServer, DependencyResolver dependencyResolver, WebServer webServer) {
         log.info("registering filters");
-        final QueryRegistryExtension queryRegistryExtension = dependencyResolver.resolveDependency(QueryRegistryExtension.class);
-        final GraphDatabaseService graphDatabaseService = neoServer.getDatabase().getGraph();
-
-        TransactionRegistry transactionRegistry =  neoServer.getTransactionRegistry();
-        TransactionFacade transactionFacade = getTransactionFacade(neoServer);
-
-        // wrap filter around legacy cypher endpoint
-        webServer.addFilter(new LegacyCypherQueryKillerFilter(queryRegistryExtension, graphDatabaseService), "/cypher");
-
-        TransactionalCypherQueryKillerFilter transactionalCypherQueryKillerFilter = new TransactionalCypherQueryKillerFilter(queryRegistryExtension, graphDatabaseService, transactionRegistry, transactionFacade);
-        webServer.addFilter(transactionalCypherQueryKillerFilter, "/transaction/*");
-//        webServer.addFilter(transactionalCypherQueryKillerFilter, "/transaction"); // "/*" for catch all
-    }
-
-    protected TransactionFacade getTransactionFacade(NeoServer neoServer) {
-        try {
-            Field transactionFacadeField = AbstractNeoServer.class.getDeclaredField("transactionFacade");
-            transactionFacadeField.setAccessible(true);
-            return (TransactionFacade) transactionFacadeField.get(neoServer);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        final EventBus eventBus = dependencyResolver.resolveDependency(EventBusLifecycle.class);
+        webServer.addFilter(new ExposeHttpContext(eventBus), "/*");
     }
 
 }

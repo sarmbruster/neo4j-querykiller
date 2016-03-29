@@ -1,81 +1,135 @@
 package org.neo4j.extension.querykiller
 
-import org.neo4j.graphdb.Transaction
+import com.google.common.eventbus.EventBus
+import com.google.common.eventbus.Subscribe
+import org.neo4j.extension.querykiller.events.bind.BindTransactionEvent
+import org.neo4j.extension.querykiller.events.query.QueryRegisteredEvent
+import org.neo4j.extension.querykiller.events.query.QueryUnregisteredEvent
+import org.neo4j.extension.querykiller.events.bind.UnbindTransactionEvent
+import org.neo4j.kernel.api.KernelTransaction
 import spock.lang.Specification
 
-class QueryRegistryExtensionSpec extends Specification
-{
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
-    def transactionMock = [ terminate: {->}] as Transaction
+class QueryRegistryExtensionSpec extends Specification {
+
+    EventBus eventBus
+    QueryRegistryExtension queryRegistryExtension
+    ExecutorService exec1, exec2
+
+    def setup() {
+        eventBus = new EventBusLifecycle(null)
+        queryRegistryExtension = new QueryRegistryExtension( {->eventBus})
+        queryRegistryExtension.start()
+
+        // create 2 ExecutorServices working on separate threads - that's why a threadfactory needs to be provided
+        exec1 = Executors.newSingleThreadExecutor( {new Thread(it)} )
+        exec2 = Executors.newSingleThreadExecutor( {new Thread(it)} )
+    }
 
     def "registering and unregistering of queries"() {
-        setup:
-        QueryRegistryExtension queryRegistryExtension = new QueryRegistryExtension()
 
         when:
-        def q1 = queryRegistryExtension.registerQuery(transactionMock, "cypher1", "endPoint", "127.0.0.1", null)
+        def transaction1 = Mock(KernelTransaction)
+        exec1.submit({
+            println Thread.currentThread()
+            eventBus.post(new BindTransactionEvent(transaction1))
+        }).get()
 
         then:
-        queryRegistryExtension.runningQueries.size() == 1
+        queryRegistryExtension.transactionEntryMap.size() == 1
 
         when:
-        def q2 = queryRegistryExtension.registerQuery(transactionMock, "cypher2", "endPoint", "127.0.0.1", null)
+        def transaction2 = Mock(KernelTransaction)
+        sleep 1
+        exec2.submit({
+            println Thread.currentThread()
+            eventBus.post(new BindTransactionEvent(transaction2))
+        }).get()
 
         then:
-        queryRegistryExtension.runningQueries.size() == 2
+        queryRegistryExtension.transactionEntryMap.size() == 2
 
         when:
-        queryRegistryExtension.unregisterQuery(new QueryRegistryEntry())
+        exec1.submit({
+            eventBus.post(new UnbindTransactionEvent(Mock(KernelTransaction)))
+        }).get()
 
         then:
-        notThrown()
+        noExceptionThrown()
+        queryRegistryExtension.transactionEntryMap.size() == 2
 
         when:
-        queryRegistryExtension.unregisterQuery(q1)
+        exec1.submit({
+            eventBus.post(new UnbindTransactionEvent(transaction1))
+        }).get()
 
         then:
-        queryRegistryExtension.runningQueries.size() == 1
+        queryRegistryExtension.transactionEntryMap.size() == 1
 
         when:
-        queryRegistryExtension.unregisterQuery(q1)
+        exec1.submit({
+            eventBus.post(new UnbindTransactionEvent(transaction1))
+        }).get()
 
         then:
-        notThrown()
+        noExceptionThrown()
 
         and:
-        queryRegistryExtension.runningQueries.size() == 1
+        queryRegistryExtension.transactionEntryMap.size() == 1
 
         when:
-        queryRegistryExtension.unregisterQuery(q2)
+        exec2.submit({
+            eventBus.post(new UnbindTransactionEvent(transaction2))
+        }).get()
 
         then:
-        queryRegistryExtension.runningQueries.size() == 0
+        queryRegistryExtension.transactionEntryMap.size() == 0
 
     }
 
     def "termination of a queries"() {
         setup:
-        QueryRegistryExtension queryRegistryExtension = new QueryRegistryExtension()
+
+        def queryRegistryEntries = []
+        eventBus.register(new Object() {
+            @Subscribe
+            public void handleQueryRegisteredEvent(QueryRegisteredEvent event) {
+                queryRegistryEntries << event.transactionEntry
+            }
+            @Subscribe
+            public void handleQueryUnregisteredEvent(QueryUnregisteredEvent event) {
+                queryRegistryEntries.remove(event.transactionEntry)
+            }
+        })
 
         when:
-        def q1 = queryRegistryExtension.registerQuery(transactionMock, "cypher1-t", "endPoint", "127.0.0.1", null)
-        def q2 = queryRegistryExtension.registerQuery(transactionMock, "cypher2-t", "endPoint", "127.0.0.1", null)
+        exec1.submit {
+            eventBus.post(new BindTransactionEvent(Mock(KernelTransaction)))
+        }.get()
+        sleep 1
+        KernelTransaction transaction2 = Mock(KernelTransaction)
+        exec2.submit {
+            eventBus.post(new BindTransactionEvent(transaction2))
+        }.get()
 
-        then: "guards are not triggered"
-        q1.killed == false
-        q2.killed == false
+        then: "transactions are not killed"
+        queryRegistryEntries*.killed == [false, false]
 
         when:
-        queryRegistryExtension.abortQuery(q1.key)
+        queryRegistryExtension.abortQuery(queryRegistryEntries[0].key)
 
         then:
-        then: "q1 guard has been triggered"
-        q1.killed == true
-        q2.killed == false
+        queryRegistryEntries*.killed == [true, false]
 
         when: "try to abort a unregistered query"
-        queryRegistryExtension.unregisterQuery(q2)
-        queryRegistryExtension.abortQuery(q2.key)
+        def key2 = queryRegistryEntries[1].key
+
+        exec2.submit {
+            eventBus.post(new UnbindTransactionEvent(transaction2))
+        }.get()
+        queryRegistryExtension.abortQuery(key2)
 
         then:
         thrown NoSuchQueryException
@@ -83,21 +137,27 @@ class QueryRegistryExtensionSpec extends Specification
 
     def "tabular output matches table structure"() {
         setup:
-        QueryRegistryExtension queryRegistryExtension = new QueryRegistryExtension()
-        assert queryRegistryExtension.runningQueries.size() == 0
-        queryRegistryExtension.registerQuery(transactionMock, "cypher1", "endPoint", "127.0.0.1", null)
-        queryRegistryExtension.registerQuery(transactionMock, "cypher2", "endPoint", "127.0.0.1", null)
+
+        assert queryRegistryExtension.transactionEntryMap.size() == 0
+        exec1.submit {
+            eventBus.post(new BindTransactionEvent(Mock(KernelTransaction)))
+        }.get()
+        sleep 1
+        exec2.submit {
+            eventBus.post(new BindTransactionEvent(Mock(KernelTransaction)))
+        }.get()
 
         when:
         def lines = queryRegistryExtension.formatAsTable().split("\n")
+        println lines[2]
 
         then:
-        queryRegistryExtension.runningQueries.size() == 2
+        queryRegistryExtension.transactionEntryMap.size() == 2
         lines.size() == 5
         lines[0] == "+---------+----------+--------------------------------------------------------------+-----------------+-----------------+"
         lines[1] == "| time ms | key      | query                                                        | source          | endPoint        |"
-        lines[2] =~ /^\| ....... \| \w{8} \| cypher1                                                      \| 127\.0\.0\.1       \| endPoint        \|$/
-        lines[3] =~ /^\| ....... \| \w{8} \| cypher2                                                      \| 127\.0\.0\.1       \| endPoint        \|$/
+        lines[2] =~ /^\| ....... \| \w{8} \| null                                                         \| n\/a             \| embedded        \|$/
+        lines[3] =~ /^\| ....... \| \w{8} \| null                                                         \| n\/a             \| embedded        \|$/
         lines[4] == "+---------+----------+--------------------------------------------------------------+-----------------+-----------------+"
     }
 

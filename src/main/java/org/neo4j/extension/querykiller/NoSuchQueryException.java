@@ -5,13 +5,13 @@ package org.neo4j.extension.querykiller;
  */
 public class NoSuchQueryException extends RuntimeException {
 
-    private String key;
+//    private Object key;
 
-    public NoSuchQueryException( String key) {
+    public NoSuchQueryException( Object key) {
         super("no query registered for key " + key);
     }
 
-    public String getKey() {
-        return key;
-    }
+//    public String getKey() {
+//        return key;
+//    }
 }

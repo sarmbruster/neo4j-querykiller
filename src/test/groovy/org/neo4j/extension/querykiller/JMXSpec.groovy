@@ -1,9 +1,13 @@
 package org.neo4j.extension.querykiller
 
+import com.google.common.eventbus.EventBus
 import org.junit.ClassRule
-import org.neo4j.extension.querykiller.events.QueryRegisteredEvent
-import org.neo4j.extension.querykiller.events.QueryUnregisteredEvent
-import org.neo4j.extension.querykiller.helper.CounterObserver
+import org.junit.rules.RuleChain
+import org.neo4j.extension.querykiller.agent.WrapNeo4jComponentsAgent
+import org.neo4j.extension.querykiller.events.bind.BindTransactionEvent
+import org.neo4j.extension.querykiller.events.bind.UnbindTransactionEvent
+import org.neo4j.extension.querykiller.helper.AgentRule
+import org.neo4j.extension.querykiller.helper.EventCounters
 import org.neo4j.extension.spock.Neo4jServerResource
 import org.neo4j.jmx.JmxUtils
 import spock.lang.Shared
@@ -18,24 +22,28 @@ class JMXSpec extends Specification {
     public static final String MOUNTPOINT = "statistics"
 
     @Shared
-    @ClassRule Neo4jServerResource neo4j = new Neo4jServerResource(
+    Neo4jServerResource neo4j = new Neo4jServerResource(
             thirdPartyJaxRsPackages: [
                     "org.neo4j.extension.querykiller.server": "/notrelevant",
                     "org.neo4j.extension.querykiller.statistics": "/$MOUNTPOINT"
             ]
     )
 
-    Observable observable
-    CounterObserver countObserver
+    @Shared
+    @ClassRule
+    RuleChain ruleChain = RuleChain.outerRule(new AgentRule(WrapNeo4jComponentsAgent)).around(neo4j)
+
+    EventBus eventBus
+    def eventCounters
 
     def setup() {
-        observable = neo4j.server.getDatabase().getGraph().getDependencyResolver().resolveDependency(QueryRegistryExtension.class)
-        countObserver = new CounterObserver()
-        observable.addObserver(countObserver)
+        eventBus = neo4j.server.getDatabase().getGraph().getDependencyResolver().resolveDependency(EventBusLifecycle.class)
+        eventCounters = new EventCounters()
+        eventBus.register(eventCounters)
     }
 
     def cleanup() {
-        observable.deleteObserver(countObserver)
+        eventBus.unregister(eventCounters)
     }
 
     def "query killer is available via JMX"() {
@@ -47,7 +55,7 @@ class JMXSpec extends Specification {
             neo4j.http.GET(MOUNTPOINT)
         }
 
-        sleepUntil { countObserver.counters[QueryRegisteredEvent.class] == 1}
+        sleepUntil { eventCounters.counters[BindTransactionEvent.class] == 1}
 
         ObjectName objectName = JmxUtils.getObjectName( neo4j.graphDatabaseService, "Queries" );
         int count = JmxUtils.getAttribute( objectName, "RunningQueriesCount" );
@@ -56,6 +64,6 @@ class JMXSpec extends Specification {
         count > 0
 
         cleanup:
-        sleepUntil { countObserver.counters[QueryUnregisteredEvent.class] == 1}
+        sleepUntil { eventCounters.counters[UnbindTransactionEvent.class] == 1}
     }
 }

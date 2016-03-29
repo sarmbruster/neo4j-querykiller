@@ -2,8 +2,9 @@ package org.neo4j.extension.querykiller.server;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.neo4j.extension.querykiller.NoSuchQueryException;
-import org.neo4j.extension.querykiller.QueryRegistryEntry;
 import org.neo4j.extension.querykiller.QueryRegistryExtension;
+import org.neo4j.extension.querykiller.TransactionEntry;
+import org.neo4j.extension.querykiller.events.transport.TransportContext;
 import org.neo4j.helpers.collection.MapUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,15 +42,18 @@ public class QueryKillerService {
 
         long now = System.currentTimeMillis();
         List<Map<String,Object>> result = new ArrayList<>();
-        for (QueryRegistryEntry q : queryRegistryExtension.getRunningQueries()) {
+        for (TransactionEntry entry : queryRegistryExtension.getTransactionEntryMap()) {
+            long threadId = entry.getThreadId();
+            TransportContext transportContext = queryRegistryExtension.transportContextForThread(threadId);
+
             Map<String, Object> map = new HashMap<>();
-            map.put("cypher", q.getCypher());
-            map.put("key", q.getKey());
-            map.put("since", now - q.getStarted().getTime());
-            map.put("thread", q.getThread());
-            map.put("remoteHost", q.getRemoteHost());
-            map.put("remoteUser", q.getRemoteUser());
-            map.put("endPoint", q.getEndPoint());
+            map.put("context", queryRegistryExtension.contextForThread(entry.getThreadId()));
+            map.put("key", entry.getKey());
+            map.put("since", now - entry.getStarted().getTime());
+            map.put("thread", entry.getThreadId());
+            map.put("remoteHost", transportContext.getRemoteHost());
+            map.put("remoteUser", transportContext.getRemoteUser());
+            map.put("endPoint", transportContext.getEndPoint());
             result.add(map);
         }
 

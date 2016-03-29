@@ -2,7 +2,11 @@ package org.neo4j.extension.querykiller.statistics
 
 import com.sun.jersey.api.client.UniformInterfaceException
 import org.junit.ClassRule
+import org.junit.rules.RuleChain
+import org.neo4j.extension.querykiller.agent.WrapNeo4jComponentsAgent
+import org.neo4j.extension.querykiller.helper.AgentRule
 import org.neo4j.extension.spock.Neo4jServerResource
+import org.neo4j.test.SuppressOutput
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -11,12 +15,18 @@ class StatisticsRestSpec extends Specification {
     public static final String MOUNTPOINT = "statistics"
 
     @Shared
-    @ClassRule Neo4jServerResource neo4j = new Neo4jServerResource(
+    Neo4jServerResource neo4j = new Neo4jServerResource(
             thirdPartyJaxRsPackages: [
                     "org.neo4j.extension.querykiller.server": "/notrelevant",
                     "org.neo4j.extension.querykiller.statistics": "/$MOUNTPOINT"
             ]
     )
+
+    @Shared
+    @ClassRule
+    RuleChain ruleChain = RuleChain.outerRule(new AgentRule(WrapNeo4jComponentsAgent))
+            .around(SuppressOutput.suppressAll())   // comment this out for debugging
+            .around(neo4j)
 
     def "statistics get updated"() {
         when:
@@ -72,8 +82,5 @@ class StatisticsRestSpec extends Specification {
         then:
         response.status() == 200
         response.content().size() == 0
-
-
     }
-
 }

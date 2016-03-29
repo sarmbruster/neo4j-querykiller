@@ -13,13 +13,13 @@ class QueryRegistryEntrySpec extends Specification
     def "test json marshalling"( )
     {
         setup:
-        def context = JAXBContext.newInstance( QueryRegistryEntry )
+        def context = JAXBContext.newInstance( TransactionEntry )
         def m = context.createMarshaller()
         def jsonMarshaller = JSONJAXBContext.getJSONMarshaller( m )
         def sw = new StringWriter()
 
         when:
-        QueryRegistryEntry entry = new QueryRegistryEntry( null, "cypher", "endpoint", "remote", "user" )
+        TransactionEntry entry = new TransactionEntry( cypher:"cypher", endpoint: "endpoint", remoteHost:"remote", remoteUser:"user" )
         jsonMarshaller.marshallToJSON( entry, sw )
         def s = sw.toString()
         def dateString = entry.started.format( "yyyy-MM-dd'T'HH:mm:ss.SSSXXX" )
@@ -33,10 +33,15 @@ class QueryRegistryEntrySpec extends Specification
 
     }
 
+    @Ignore("outdated, formatting is now done in QueryRegistryExtension")
     def "test table formatting"( )
     {
         setup:
-        QueryRegistryEntry queryRegistryEntry = new QueryRegistryEntry( null, cypher, endPoint, remoteHost, null )
+
+        TransactionEntry queryRegistryEntry = new TransactionEntry( null)
+        queryRegistryEntry.endPoint = endPoint
+        queryRegistryEntry.remoteHost = remoteHost
+        queryRegistryEntry.remoteUser = null
 
         when: "we need to split the formatted string, first part contains duration in msec"
         def result = queryRegistryEntry.formatAsTable()
@@ -62,10 +67,16 @@ class QueryRegistryEntrySpec extends Specification
 
     def "should key have 8 characters"() {
         when:
-        QueryRegistryEntry entry = new QueryRegistryEntry( null, "cypher", "endpoint", "remote", "user" )
+        def entry1 = new TransactionEntry(null)
+        sleep 1
+        def entry2 = new TransactionEntry(null)
 
         then:
-        entry.key.size() == 8
+        entry1.key.size() == 8
+        entry2.key.size() == 8
+
+        and:
+        entry1.key != entry2.key
 
     }
 }

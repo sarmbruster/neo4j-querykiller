@@ -1,10 +1,10 @@
 package org.neo4j.extension.querykiller.statistics;
 
+import org.neo4j.extension.querykiller.EventBusLifecycle;
 import org.neo4j.extension.querykiller.QueryRegistryExtension;
 import org.neo4j.helpers.Service;
 import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
-import org.neo4j.kernel.extension.KernelExtensions;
 import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
 
@@ -14,10 +14,9 @@ public class QueryStatisticsExtensionFactory extends KernelExtensionFactory<Quer
 
     public interface Dependencies
     {
-        KernelExtensions getKernelExtensions();
         Config getConfig();
-        // for a unknown reason it seems that dependencies on other kernel extension do no longer work
-//        QueryRegistryExtension getQueryRegistryExtension();
+        EventBusLifecycle getEventBusLifecylce();
+        QueryRegistryExtension getQueryRegistryExtension();
     }
 
     public QueryStatisticsExtensionFactory() {
@@ -26,8 +25,10 @@ public class QueryStatisticsExtensionFactory extends KernelExtensionFactory<Quer
 
     @Override
     public Lifecycle newInstance(KernelContext context, final Dependencies dependencies) throws Throwable {
-        KernelExtensions kernelExtensions = dependencies.getKernelExtensions();
-        return new QueryStatisticsExtension(kernelExtensions.resolveDependency(QueryRegistryExtension.class), dependencies.getConfig());
+//        KernelExtensions kernelExtensions = dependencies.getKernelExtensions();
+//        EventBusLifecylce eventBusLifecylce = kernelExtensions.resolveDependency(EventBusLifecylce.class);
+//        return new QueryStatisticsExtension(eventBusLifecylce.getEventBus(), dependencies.getConfig());
+        return new QueryStatisticsExtension(dependencies);
 
         // old version for Neo4j <= 2.1.x
 //        return new QueryStatisticsExtension(dependencies.getQueryRegistryExtension());

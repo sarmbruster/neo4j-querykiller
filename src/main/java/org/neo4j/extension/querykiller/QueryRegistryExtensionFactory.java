@@ -11,7 +11,7 @@ public class QueryRegistryExtensionFactory extends KernelExtensionFactory<QueryR
 
     public interface Dependencies
     {
-        // intentionally empty
+        EventBusLifecycle getEventBusLifecycle();
     }
 
     public QueryRegistryExtensionFactory() {
@@ -20,7 +20,7 @@ public class QueryRegistryExtensionFactory extends KernelExtensionFactory<QueryR
 
     @Override
     public Lifecycle newInstance(KernelContext kernelContext, final Dependencies dependencies) throws Throwable {
-        return new QueryRegistryExtension();
+        return new QueryRegistryExtension(dependencies);
     }
 
 }

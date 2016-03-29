@@ -1,30 +1,33 @@
 package org.neo4j.extension.querykiller.statistics;
 
-import org.neo4j.extension.querykiller.QueryRegistryEntry;
-import org.neo4j.extension.querykiller.events.QueryUnregisteredEvent;
+import com.google.common.eventbus.EventBus;
+import com.google.common.eventbus.Subscribe;
+import org.neo4j.extension.querykiller.QueryRegistryExtension;
+import org.neo4j.extension.querykiller.TransactionEntry;
+import org.neo4j.extension.querykiller.events.query.QueryUnregisteredEvent;
 import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.configuration.Settings;
 import org.neo4j.kernel.configuration.Config;
-import org.neo4j.kernel.lifecycle.Lifecycle;
+import org.neo4j.kernel.lifecycle.LifecycleAdapter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-public class QueryStatisticsExtension implements Lifecycle, Observer
+public class QueryStatisticsExtension extends LifecycleAdapter
 {
     public final Logger log = LoggerFactory.getLogger(QueryStatisticsExtension.class);
 
     protected final Map<String, QueryStat> statistics = new HashMap<>();
 
-    private final Observable observable;
-    private final Config config;
+    private Config config;
+    private EventBus eventBus;
+    private QueryRegistryExtension queryRegistryExtension;
+    private final QueryStatisticsExtensionFactory.Dependencies dependencies;
     public static final Setting<Boolean> STATISTICS_ENABLED_SETTING = Settings.setting("extension.statistics.enabled", Settings.BOOLEAN, Settings.TRUE);
 
-    public QueryStatisticsExtension(Observable observable, Config config)
-    {
-        this.observable = observable;
-        this.config = config;
+    public QueryStatisticsExtension(QueryStatisticsExtensionFactory.Dependencies dependencies) {
+        this.dependencies = dependencies;
     }
 
     public Map<String, QueryStat> getStatistics() {
@@ -37,31 +40,28 @@ public class QueryStatisticsExtension implements Lifecycle, Observer
         return map;
     }
 
-    @Override
-    public void update(Observable observable, Object o) {
-        if (o instanceof QueryUnregisteredEvent) {
+    @Subscribe
+    public void handleQueryUnregisteredEvent(QueryUnregisteredEvent event) {
+        TransactionEntry qre = event.getTransactionEntry();
 
-            QueryRegistryEntry qre = ((QueryUnregisteredEvent)o).getQueryRegistryEntry();
-
-            QueryStat queryStat = statistics.get(qre.getCypher());
-            if (queryStat==null) {
-                queryStat = new QueryStat();
-                statistics.put(qre.getCypher(), queryStat);
-            }
-            queryStat.add(qre.getStarted(), System.currentTimeMillis() - qre.getStarted().getTime());
+        String query = event.getQuery();
+        QueryStat queryStat = statistics.get(query);
+        if (queryStat==null) {
+            queryStat = new QueryStat();
+            statistics.put(query, queryStat);
         }
+        queryStat.add(qre.getStarted(), System.currentTimeMillis() - qre.getStarted().getTime());
+
     }
 
     @Override
     public void init() throws Throwable {
+        config = dependencies.getConfig();
+        queryRegistryExtension = dependencies.getQueryRegistryExtension();
+        eventBus = dependencies.getEventBusLifecylce();
         if (config.get(STATISTICS_ENABLED_SETTING)) {
-            observable.addObserver(this);
+            eventBus.register(this);
         }
-    }
-
-    @Override
-    public void start() throws Throwable {
-
     }
 
     @Override
@@ -71,8 +71,8 @@ public class QueryStatisticsExtension implements Lifecycle, Observer
 
     @Override
     public void shutdown() throws Throwable {
-        if (config.get(STATISTICS_ENABLED_SETTING)) {
-            observable.deleteObserver(this);
+        if (dependencies.getConfig().get(STATISTICS_ENABLED_SETTING)) {
+            eventBus.unregister(this);
         }
     }
 

@@ -13,7 +13,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 
-public abstract class DepenceyResolverAwareLifecycle implements SPIPluginLifecycle {
+public abstract class DependencyResolverAwareLifecycle implements SPIPluginLifecycle {
 
     @Override
     public final Collection<Injectable<?>> start(NeoServer neoServer) {
@@ -53,7 +53,9 @@ public abstract class DepenceyResolverAwareLifecycle implements SPIPluginLifecyc
      * @param dependencyResolver
      * @param webServer
      */
-    abstract protected void start(NeoServer neoServer, DependencyResolver dependencyResolver, WebServer webServer);
+    protected void start(NeoServer neoServer, DependencyResolver dependencyResolver, WebServer webServer) {
+        // intentionally empty - override this in subclasses
+    }
 
     @Override
     public Collection<Injectable<?>> start(GraphDatabaseService graphDatabaseService, Configuration config) {
