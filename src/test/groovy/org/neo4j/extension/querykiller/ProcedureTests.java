@@ -32,7 +32,7 @@ public class ProcedureTests {
         gdb.shutdown();
     }
 
-    // this one is for demoing a kind of unexpected behaviour - to be discussed with devteam
+    // this one is for demoing a kind of unexpected behaviour - to be discussed with
     @Test(expected = TransactionFailureException.class)
     public void shouldVoidProcedureWithCloseThrowException() throws KernelException {
         try (Transaction tx = gdb.beginTx()) {

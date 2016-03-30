@@ -196,7 +196,7 @@ class QueryKillerRestSpec extends Specification {
         setup:
         def now = System.currentTimeMillis()
         def delay = 5000
-        def procedureStatement = "CALL org.neo4j.extension.querykiller.helper.sleep($delay)".toString()
+        def procedureStatement = "CALL org.neo4j.extension.querykiller.helper.transactionAwareSleep($delay)".toString()
         def threads =  (0..<1).collect {
             Thread.start {
                 neo4j.http.POST("db/data/transaction/commit",
@@ -273,7 +273,7 @@ class QueryKillerRestSpec extends Specification {
                         createJsonForTransactionalEndpoint([
                                 "CREATE (n) return n",
                                 "MATCH (n) RETURN count(n) AS c",
-                                "CALL org.neo4j.extension.querykiller.helper.sleep(200)"
+                                "CALL org.neo4j.extension.querykiller.helper.transactionAwareSleep(200)"
                         ]))
                 }
         }
@@ -293,7 +293,7 @@ class QueryKillerRestSpec extends Specification {
 
         and:
         response.content().size() == 1
-        response.content()[0].context == "CALL org.neo4j.extension.querykiller.helper.sleep(200)"
+        response.content()[0].context == "CALL org.neo4j.extension.querykiller.helper.transactionAwareSleep(200)"
         response.content()[0].endPoint == "/db/data/transaction/commit"
 
         cleanup:

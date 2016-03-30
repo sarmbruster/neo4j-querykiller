@@ -25,15 +25,28 @@ public class HelperProcedures {
         while (System.currentTimeMillis()-start < duration) {
             try {
                 Thread.sleep(5);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+
+    @Procedure
+    public void transactionAwareSleep(@Name("duration") long duration)  {
+        long start = System.currentTimeMillis();
+
+        while (System.currentTimeMillis()-start < duration) {
+            try {
+                Thread.sleep(5);
                 if (transaction.shouldBeTerminated()) {
-                    throw new RuntimeException("HURZ");
+                    throw new RuntimeException("this transaction is marked as terminated, so throw an exception");
                 }
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
 
         }
-
-
     }
+
+
 }
