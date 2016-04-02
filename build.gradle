@@ -1,7 +1,9 @@
-apply plugin: "java"
-apply plugin: "groovy"
-//apply plugin: 'maven-publish'
-apply plugin: "idea"
+plugins {
+    id 'groovy'
+    id 'com.github.johnrengelman.shadow' version '1.2.3'
+    id 'idea'
+}
+
 idea {
     project {
         ext.jdkName = '1.8'
@@ -17,13 +19,6 @@ repositories {
     mavenCentral()
     //maven { url "http://m2.neo4j.org/content/repositories/releases/" }
     maven { url "https://raw.github.com/neo4j-contrib/m2/master/releases" }
-}
-
-configurations {
-    fat {
-        description = "fatjar"
-        transitive = true
-    }
 }
 
 ext {
@@ -46,19 +41,23 @@ dependencies {
     testCompile 'com.ea.agentloader:ea-agent-loader:1.0.0'
 
     runtime 'org.glassfish.jersey.media:jersey-media-json-jackson:2.13'
-
-    fat 'org.glassfish.jersey.media:jersey-media-json-jackson:2.13'
 }
 
 version = "1.0.0-SNAPSHOT"
 group = "org.neo4j.extension.querykiller"
 
-task fatJar(type: Jar) {
-    baseName = project.name + '-all'
-    from {
-           configurations.fat.collect { it.isDirectory() ? it : zipTree(it) }
+jar {
+    manifest {
+        attributes("Premain-Class": "org.neo4j.extension.querykiller.agent.WrapNeo4jComponentsAgent")
     }
-    with jar
+}
+
+shadowJar {
+  dependencies {
+    include(dependency('org.glassfish.jersey.media:jersey-media-json-jackson'))
+    include(dependency('org.javassist:javassist'))
+    include(dependency('com.google.guava:guava'))
+  }
 }
 
 /*
