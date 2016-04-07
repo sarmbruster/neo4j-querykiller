@@ -8,11 +8,11 @@ Installation
 
 Use [gradle](http://www.gradle.org) to build the project:
 
-    ./graldew fatJar
+    ./graldew build shadowJar
     
-The `fatJar` task creates one single jar file containing the code of neo4j-querykiller itself and those of its dependencies not being part of the neo4j distribution. See [build.gradle](build.gradle)'s the `fat` dependencies in the dependency section.
+The `shadowJar` task creates one single jar file containing the code of neo4j-querykiller itself and those of its dependencies not being part of the neo4j distribution. See [build.gradle](build.gradle)'s the `fat` dependencies in the dependency section.
      
-Copy (or symlink) the resulting file `./build/libs/neo4j-querykiller-all-1.0.0-SNAPSHOT.jar` to Neo4j's plugin folder.
+Copy (or symlink) the resulting file `./build/libs/neo4j-querykiller-1.0.0-SNAPSHOT-all.jar` to Neo4j's plugin folder.
   
 Change configuration in `$NEO4J/conf/neo4j-server.properties`:
 
