@@ -1,7 +1,6 @@
 package org.neo4j.extension.querykiller.server
 
 import com.google.common.eventbus.EventBus
-import com.google.common.eventbus.Subscribe
 import com.sun.jersey.api.client.UniformInterfaceException
 import groovy.util.logging.Slf4j
 import org.junit.ClassRule
@@ -26,6 +25,9 @@ import spock.lang.Specification
 import spock.lang.Unroll
 
 import javax.ws.rs.core.MediaType
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 import java.util.concurrent.TimeoutException
 
 import static org.neo4j.extension.querykiller.helper.SpecHelper.*
@@ -96,7 +98,7 @@ class QueryKillerRestSpec extends Specification {
         log.error "done: $specificationContext.currentFeature.name"
     }
 
-    def "cypher query is registered and unregistersed"() {
+    def "cypher query is registered and unregistered"() {
         when:
         def json = [
                 query: "MATCH (n) RETURN count(n) AS c",
@@ -191,28 +193,61 @@ class QueryKillerRestSpec extends Specification {
         1000            | 50
     }
 
-    //@Ignore
+    private long measureBaseline(def samples) {
+        eventBus.unregister(eventCounters)
+        "unwind range(0,1000) as x create (n:Person{id:x})".cypher()
+        "unwind range(0,{samples}) as x match (n:Person {id:(x % 1000)}) return count(n) as c".cypher(samples: samples)[0].c
+        def now = System.currentTimeMillis()
+        def c = "unwind range(0,{samples}) as x match (n:Person {id:(x % 1000)}) return count(n) as c".cypher(samples: samples)[0].c
+        neo4j.closeCypher()
+        eventBus.register(eventCounters)
+        return System.currentTimeMillis()-now
+    }
+
     def "send query with delay and terminate it"() {
         setup:
-        def now = System.currentTimeMillis()
-        def delay = 5000
-        def procedureStatement = "CALL org.neo4j.extension.querykiller.helper.transactionAwareSleep($delay)".toString()
-        def threads =  (0..<1).collect {
+        long expectedRuntime = 3000
+        long duration = measureBaseline(300)
+        long samples = expectedRuntime * 300 / duration
+
+//        def procedureStatement = "CALL org.neo4j.extension.querykiller.helper.transactionAwareSleep($delay)".toString()
+        def procedureStatement = "unwind range(0,$samples) as x match (n:Person {id:(x % 1000)}) return count(n) as c".toString()
+
+        Future future = Executors.newSingleThreadExecutor().submit({
+            log.info("starting long running query")
+            def now = System.currentTimeMillis()
+            def r = neo4j.http.POST("db/data/transaction/commit",
+                    createJsonForTransactionalEndpoint([procedureStatement]))
+
+            //                assert errors.size() == 0
+            log.info("done long running query " + r.content())
+            log.info("done long running query in ${System.currentTimeMillis() - now} (expected $expectedRuntime)")
+            return r.content()
+        } as Callable )
+
+        /*def threads =  (0..<1).collect {
             Thread.start {
-                neo4j.http.POST("db/data/transaction/commit",
+                log.info("starting long running query")
+                def now = System.currentTimeMillis()
+                def r = neo4j.http.POST("db/data/transaction/commit",
                         createJsonForTransactionalEndpoint([procedureStatement]))
-                }
-        }
-        sleepUntil { eventCounters.counters[QueryRegisteredEvent.class] == 1}
+                def errors = r.content().errors
+//                assert errors.size() == 0
+                log.info("done long running query " + r.content())
+                log.info("done long running query in ${System.currentTimeMillis()-now} (expected $expectedRuntime)")
+            }
+        }*/
+        sleepUntil { eventCounters.counters[QueryRegisteredEvent] == 1 && eventCounters.counters[CypherContext] == 1 }
+        sleep(200) // await query building
 
         when: "check query list"
         def response = neo4j.http.withHeaders("Accept", MediaType.APPLICATION_JSON).GET(MOUNTPOINT)
-        log.info("status called")
+        log.info("status called, got ${eventCounters.counters[QueryUnregisteredEvent.class]} ${response.status()}  ${response.content()}")
 
         then:
         response.status() == 200
 
-        and:
+        and: "query is still running in separate thread"
         eventCounters.counters[QueryUnregisteredEvent.class] == 0
 
         and:
@@ -220,15 +255,17 @@ class QueryKillerRestSpec extends Specification {
         response.content()[0].context == procedureStatement
 
         when:
-        sleep(200)
         def key = response.content()[0].key
+        log.info("before sending kill")
         response = neo4j.http.DELETE("$MOUNTPOINT/$key")
+        log.info("sending kill $key ${response.status()}")
 
         then: "delete operation gives 200"
         response.status() == 200
         response.content().deleted == key
 
         when: "check query list again"
+        log.info("query terminated")
         sleepUntil { (eventCounters.counters[QueryAbortedEvent.class] == 1) &&
              (eventCounters.counters[QueryUnregisteredEvent.class] == 1)
         }
@@ -250,8 +287,18 @@ class QueryKillerRestSpec extends Specification {
         def e = thrown(UniformInterfaceException) // it's weird but a 204 is wrapped into an exception
         e.response.status == 204*/
 
+        when:
+        def fResponse = future.get()
+
+        then:
+        fResponse.errors.size() == 1
+        fResponse.errors[0].code == "Neo.DatabaseError.Statement.ExecutionFailed"
+        fResponse.errors[0].message == "The transaction has been terminated, no new operations in it are allowed. This normally happens because a client explicitly asks to terminate the transaction, for instance to stop a long-running operation. It may also happen because an operator has asked the database to be shut down, or because the current instance is about to perform a cluster role change. Simply retry your operation in a new transaction, and you should see a successful result."
+
+
         cleanup:
-        threads.each { it.join() }
+
+//        threads.each { it.join() }
 
         sleepUntil {
             try {

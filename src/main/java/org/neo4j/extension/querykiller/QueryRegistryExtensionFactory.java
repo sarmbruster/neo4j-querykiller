@@ -1,6 +1,7 @@
 package org.neo4j.extension.querykiller;
 
 import org.neo4j.helpers.Service;
+import org.neo4j.kernel.configuration.Config;
 import org.neo4j.kernel.extension.KernelExtensionFactory;
 import org.neo4j.kernel.impl.spi.KernelContext;
 import org.neo4j.kernel.lifecycle.Lifecycle;
@@ -12,6 +13,7 @@ public class QueryRegistryExtensionFactory extends KernelExtensionFactory<QueryR
     public interface Dependencies
     {
         EventBusLifecycle getEventBusLifecycle();
+        Config getConfig();
     }
 
     public QueryRegistryExtensionFactory() {

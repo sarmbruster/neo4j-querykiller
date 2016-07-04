@@ -22,7 +22,7 @@ repositories {
 }
 
 ext {
-    neo4jVersion = "3.0.0-M05"
+    neo4jVersion = "3.0.3"
     jerseyVersion = "1.19"
 //    neo4jClientVersion = "1.0.0-M04"
 }
@@ -35,10 +35,14 @@ dependencies {
     compile group: 'org.neo4j.app', name: 'neo4j-server', version: neo4jVersion
     compile 'org.javassist:javassist:3.20.0-GA'
     compile 'com.google.guava:guava:19.0'
+    compile group: 'org.slf4j', name: 'slf4j-api', version: '1.7.20'
+//    compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.7'
 
-    testCompile group: 'org.neo4j.contrib', name: 'neo4j-spock-extension', version: '0.7.3'
+    testCompile group: 'org.neo4j.contrib', name: 'neo4j-spock-extension', version: '0.7.4'
 //    testCompile "org.neo4j.driver:neo4j-java-driver:$neo4jClientVersion"
     testCompile 'com.ea.agentloader:ea-agent-loader:1.0.0'
+    testCompile group: 'ch.qos.logback', name: 'logback-classic', version: '1.1.7'
+
 
     runtime 'org.glassfish.jersey.media:jersey-media-json-jackson:2.13'
 }

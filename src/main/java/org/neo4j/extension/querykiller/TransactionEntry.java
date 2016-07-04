@@ -1,5 +1,7 @@
 package org.neo4j.extension.querykiller;
 
+import com.google.common.eventbus.EventBus;
+import org.neo4j.extension.querykiller.events.bind.TransactionKillEvent;
 import org.neo4j.kernel.api.KernelTransaction;
 
 import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
@@ -16,11 +18,13 @@ public class TransactionEntry implements Comparable {
     private final Date started = new Date();
     private final long threadId = Thread.currentThread().getId();
     private final KernelTransaction kernelTransaction;
+    private final long timeout;
     private boolean killed = false;
     private String key;
 
-    public TransactionEntry(KernelTransaction kernelTransaction) {
+    public TransactionEntry(KernelTransaction kernelTransaction, long timeout) {
         this.kernelTransaction = kernelTransaction;
+        this.timeout = timeout;
     }
 
     // key is lazy
@@ -47,9 +51,10 @@ public class TransactionEntry implements Comparable {
         return killed;
     }
 
-    public void kill() {
+    public void kill(EventBus eventBus) {
         kernelTransaction.markForTermination();
         killed = true;
+        eventBus.post(new TransactionKillEvent(kernelTransaction));
     }
 
     private String calculateKey() {
@@ -130,4 +135,7 @@ public class TransactionEntry implements Comparable {
                 '}';
     }
 
+    public boolean isDueForTermination(long now) {
+        return now > started.getTime() + timeout;
+    }
 }

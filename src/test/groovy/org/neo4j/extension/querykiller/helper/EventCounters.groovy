@@ -15,9 +15,13 @@ class EventCounters {
     public void handleEvent(Object o) {
         synchronized (o.class) {  // this gets concurrently called from different threads -> synchronized is crucial
             counters[o.class]++
-            log.debug("incrementing for ${o.class.simpleName}: ${counters[o.class]}")
+            log.error("incrementing for ${o.class.simpleName}: ${counters[o.class]}")
 /*            counters.each {k,v -> log.debug("${k}: $v")
             }*/
         }
+    }
+
+    public void reset() {
+        counters = [:].withDefault {0}
     }
 }

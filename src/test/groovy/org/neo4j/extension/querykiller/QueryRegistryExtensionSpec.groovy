@@ -7,10 +7,13 @@ import org.neo4j.extension.querykiller.events.query.QueryRegisteredEvent
 import org.neo4j.extension.querykiller.events.query.QueryUnregisteredEvent
 import org.neo4j.extension.querykiller.events.bind.UnbindTransactionEvent
 import org.neo4j.kernel.api.KernelTransaction
+import org.neo4j.kernel.configuration.Config
 import spock.lang.Specification
 
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+
+import static org.neo4j.extension.querykiller.QueryRegistryExtensionFactory.*
 
 class QueryRegistryExtensionSpec extends Specification {
 
@@ -20,7 +23,11 @@ class QueryRegistryExtensionSpec extends Specification {
 
     def setup() {
         eventBus = new EventBusLifecycle(null)
-        queryRegistryExtension = new QueryRegistryExtension( {->eventBus})
+
+        queryRegistryExtension = new QueryRegistryExtension(
+                [getConfig: { new Config()},
+                 getEventBusLifecycle: { eventBus } ]
+                        as QueryRegistryExtensionFactory.Dependencies)
         queryRegistryExtension.start()
 
         // create 2 ExecutorServices working on separate threads - that's why a threadfactory needs to be provided

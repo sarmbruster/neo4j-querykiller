@@ -1,7 +1,7 @@
 package org.neo4j.extension.querykiller;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
@@ -15,13 +15,17 @@ import org.neo4j.extension.querykiller.events.query.QueryUnregisteredEvent;
 import org.neo4j.extension.querykiller.events.transport.EmbeddedTransportContext;
 import org.neo4j.extension.querykiller.events.transport.ResetTransportContext;
 import org.neo4j.extension.querykiller.events.transport.TransportContext;
+import org.neo4j.graphdb.config.Setting;
 import org.neo4j.kernel.api.KernelTransaction;
+import org.neo4j.kernel.configuration.Settings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class QueryRegistryExtension implements DefaultLifecycle
 {
     public final Logger log = LoggerFactory.getLogger(QueryRegistryExtension.class);
+
+    public final static Setting<Long> QUERY_TIMEOUT_SETTING = Settings.setting("querykiller.timeout", Settings.DURATION, "0");
 
     // maps threadId to Entry
     protected final Map<Long, TransactionEntry> transactionEntryMap = new ConcurrentHashMap<>();
@@ -34,6 +38,9 @@ public class QueryRegistryExtension implements DefaultLifecycle
 
     private EventBus eventBus;
     private final QueryRegistryExtensionFactory.Dependencies dependencies;
+    private long queryTimeout;
+    private ScheduledExecutorService queryTimeoutExecutor = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledFuture<?> scheduledFuture;
 
     public QueryRegistryExtension(QueryRegistryExtensionFactory.Dependencies dependencies) {
         this.dependencies = dependencies;
@@ -41,7 +48,7 @@ public class QueryRegistryExtension implements DefaultLifecycle
 
     @Subscribe
     public void handleBindTransaction(BindTransactionEvent event) {
-        TransactionEntry transactionEntry = new TransactionEntry(event.getKernelTransaction());
+        TransactionEntry transactionEntry = new TransactionEntry(event.getKernelTransaction(), queryTimeout);
         transactionEntryMap.put( Thread.currentThread().getId(), transactionEntry);
         log.debug("registered query for key " + transactionEntry);
         eventBus.post(new QueryRegisteredEvent(transactionEntry));
@@ -87,7 +94,7 @@ public class QueryRegistryExtension implements DefaultLifecycle
 
     public TransactionEntry abortQuery(String key) {
         TransactionEntry entry = findQueryRegistryEntryForKey( key );
-        entry.kill();
+        entry.kill(eventBus);
         log.info("aborted query for key " + key);
         transactionEntryMap.remove(entry);
         eventBus.post(new QueryAbortedEvent(entry));
@@ -124,11 +131,15 @@ public class QueryRegistryExtension implements DefaultLifecycle
     {
         eventBus = dependencies.getEventBusLifecycle();
         eventBus.register(this);
+        startTerminationByTimeout(dependencies.getConfig().get(QUERY_TIMEOUT_SETTING));
     }
 
     @Override
     public void stop() throws Throwable
     {
+        if (queryTimeoutExecutor!=null) {
+            queryTimeoutExecutor.shutdown();
+        }
         eventBus.unregister(this);
     }
 
@@ -167,4 +178,30 @@ public class QueryRegistryExtension implements DefaultLifecycle
         TransportContext transportContext = transportContextMap.get(threadId);
         return transportContext == null ? EmbeddedTransportContext.getInstance() : transportContext;
     }
+
+    public void startTerminationByTimeout(long queryTimeout) {
+        stopTerminationByTimeout();  // just to be sure
+        this.queryTimeout = queryTimeout;
+        if (this.queryTimeout > 0) {
+            scheduledFuture = queryTimeoutExecutor.scheduleAtFixedRate(() -> {
+                log.warn("check for old queries");
+                long now = System.currentTimeMillis();
+                for (TransactionEntry entry : transactionEntryMap.values()) {
+                    if ((!entry.isKilled()) && (entry.isDueForTermination(now))) {
+                        entry.kill(eventBus);
+                    }
+                }
+            }, this.queryTimeout, this.queryTimeout, TimeUnit.MILLISECONDS);
+        }
+    }
+
+    public boolean stopTerminationByTimeout() {
+        if (scheduledFuture==null) {
+            return false;
+        } else {
+            return scheduledFuture.cancel(false);
+        }
+    }
+
+
 }
