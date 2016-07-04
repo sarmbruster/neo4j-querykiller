@@ -59,8 +59,7 @@ public class WrapNeo4jComponentsAgent {
                         constructorAndPosition.first().insertAfter(codeBlock);
 
 
-                        String setBoltContext = "if (eventBus!=null) {eventBus.post(new org.neo4j.extension.querykiller.events.transport.BoltContext(\"dummyconnection\"));}";
-//                        String setBoltContext = "if (eventBus!=null) {eventBus.post(new org.neo4j.extension.querykiller.events.transport.BoltContext(connectionDescriptor()));}";  // TODO: use this when next release after 3.0.0-M05 is published
+                        String setBoltContext = "if (eventBus!=null) {eventBus.post(new org.neo4j.extension.querykiller.events.transport.BoltContext(connectionDescriptor()));}";
                         String unsetBoltContext = "if (eventBus!=null) {eventBus.post(new org.neo4j.extension.querykiller.events.transport.ResetBoltContext());}";
                         sessionStateMachine.getDeclaredMethod("run").insertBefore(setBoltContext);
                         sessionStateMachine.getDeclaredMethod("pullAll").insertAfter(unsetBoltContext, true);
