@@ -193,24 +193,27 @@ class QueryKillerRestSpec extends Specification {
         1000            | 50
     }
 
+    /*
+     * take a baseline measurement to be used for the query to interrupt
+     * this should balance out different hardware speed
+     */
     private long measureBaseline(def samples) {
         eventBus.unregister(eventCounters)
         "unwind range(0,1000) as x create (n:Person{id:x})".cypher()
         "unwind range(0,{samples}) as x match (n:Person {id:(x % 1000)}) return count(n) as c".cypher(samples: samples)[0].c
         def now = System.currentTimeMillis()
         def c = "unwind range(0,{samples}) as x match (n:Person {id:(x % 1000)}) return count(n) as c".cypher(samples: samples)[0].c
-        neo4j.closeCypher()
+        neo4j.closeCypher()  // crucial! otherwise open tx will pollute query list
         eventBus.register(eventCounters)
         return System.currentTimeMillis()-now
     }
 
     def "send query with delay and terminate it"() {
         setup:
-        long expectedRuntime = 3000
+        long expectedRuntime = 3000 // if query would *not* be terminated it should run approx. this time duration
         long duration = measureBaseline(300)
         long samples = expectedRuntime * 300 / duration
 
-//        def procedureStatement = "CALL org.neo4j.extension.querykiller.helper.transactionAwareSleep($delay)".toString()
         def procedureStatement = "unwind range(0,$samples) as x match (n:Person {id:(x % 1000)}) return count(n) as c".toString()
 
         Future future = Executors.newSingleThreadExecutor().submit({
@@ -218,25 +221,9 @@ class QueryKillerRestSpec extends Specification {
             def now = System.currentTimeMillis()
             def r = neo4j.http.POST("db/data/transaction/commit",
                     createJsonForTransactionalEndpoint([procedureStatement]))
-
-            //                assert errors.size() == 0
-            log.info("done long running query " + r.content())
-            log.info("done long running query in ${System.currentTimeMillis() - now} (expected $expectedRuntime)")
             return r.content()
         } as Callable )
 
-        /*def threads =  (0..<1).collect {
-            Thread.start {
-                log.info("starting long running query")
-                def now = System.currentTimeMillis()
-                def r = neo4j.http.POST("db/data/transaction/commit",
-                        createJsonForTransactionalEndpoint([procedureStatement]))
-                def errors = r.content().errors
-//                assert errors.size() == 0
-                log.info("done long running query " + r.content())
-                log.info("done long running query in ${System.currentTimeMillis()-now} (expected $expectedRuntime)")
-            }
-        }*/
         sleepUntil { eventCounters.counters[QueryRegisteredEvent] == 1 && eventCounters.counters[CypherContext] == 1 }
         sleep(200) // await query building
 
@@ -297,8 +284,6 @@ class QueryKillerRestSpec extends Specification {
 
 
         cleanup:
-
-//        threads.each { it.join() }
 
         sleepUntil {
             try {

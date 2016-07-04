@@ -4,7 +4,6 @@ import com.google.common.eventbus.EventBus
 import groovy.util.logging.Slf4j
 import org.junit.ClassRule
 import org.junit.rules.RuleChain
-import org.neo4j.bolt.v1.runtime.internal.SessionStateMachine
 import org.neo4j.driver.v1.StatementResult
 import org.neo4j.extension.querykiller.EventBusLifecycle
 import org.neo4j.extension.querykiller.QueryRegistryExtension
@@ -20,8 +19,6 @@ import org.neo4j.extension.querykiller.helper.EventCounters
 import org.neo4j.extension.spock.Neo4jBoltResource
 import org.neo4j.extension.spock.Neo4jUtils
 import org.neo4j.graphdb.DependencyResolver
-import org.neo4j.kernel.impl.core.ThreadToStatementContextBridge
-import org.neo4j.logging.NullLog
 import org.neo4j.test.SuppressOutput
 import spock.lang.Shared
 import spock.lang.Specification
@@ -32,12 +29,6 @@ import static org.neo4j.extension.querykiller.helper.SpecHelper.sleepUntil
 
 @Slf4j
 class QueryKillerBoltSpec extends Specification {
-
-    public static final String MOUNTPOINT = "querykiller"
-
-//    @Shared
-//    @ClassRule
-//    SuppressOutput suppressOutput = SuppressOutput.suppressAll()
 
     @Shared
     Neo4jBoltResource neo4j = new Neo4jBoltResource(
@@ -92,7 +83,6 @@ class QueryKillerBoltSpec extends Specification {
         log.info "cleanup for $specificationContext.currentFeature.name "
         Neo4jUtils.assertNoOpenTransaction(neo4j.graphDatabaseService)
         log.error "done: $specificationContext.currentFeature.name"
-
     }
 
     def "send bolt query"() {
