@@ -78,7 +78,7 @@ class QueryTimeoutSpec extends Specification {
         eventCounters = new EventCounters()
         eventBus.register(eventCounters)
 
-        assert queryRegistryExtension.transactionEntryMap.size() == 0
+        assert queryRegistryExtension.transactionEntries.size() == 0
         queryRegistryExtension.startTerminationByTimeout(500);
     }
 

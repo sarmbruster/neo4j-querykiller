@@ -79,7 +79,7 @@ class QueryKillerRestSpec extends Specification {
 
         def resolver = neo4j.server.getDatabase().getGraph().getDependencyResolver()
         QueryRegistryExtension queryRegistryExtension = resolver.resolveDependency(QueryRegistryExtension)
-        assert queryRegistryExtension.transactionEntryMap.size() == 0
+        assert queryRegistryExtension.transactionEntries.size() == 0
     }
 
     def cleanup() {

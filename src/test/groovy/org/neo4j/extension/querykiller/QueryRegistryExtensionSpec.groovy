@@ -13,8 +13,6 @@ import spock.lang.Specification
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
-import static org.neo4j.extension.querykiller.QueryRegistryExtensionFactory.*
-
 class QueryRegistryExtensionSpec extends Specification {
 
     EventBus eventBus
@@ -45,7 +43,7 @@ class QueryRegistryExtensionSpec extends Specification {
         }).get()
 
         then:
-        queryRegistryExtension.transactionEntryMap.size() == 1
+        queryRegistryExtension.transactionEntries.size() == 1
 
         when:
         def transaction2 = Mock(KernelTransaction)
@@ -56,7 +54,7 @@ class QueryRegistryExtensionSpec extends Specification {
         }).get()
 
         then:
-        queryRegistryExtension.transactionEntryMap.size() == 2
+        queryRegistryExtension.transactionEntries.size() == 2
 
         when:
         exec1.submit({
@@ -65,7 +63,7 @@ class QueryRegistryExtensionSpec extends Specification {
 
         then:
         noExceptionThrown()
-        queryRegistryExtension.transactionEntryMap.size() == 2
+        queryRegistryExtension.transactionEntries.size() == 2
 
         when:
         exec1.submit({
@@ -73,7 +71,7 @@ class QueryRegistryExtensionSpec extends Specification {
         }).get()
 
         then:
-        queryRegistryExtension.transactionEntryMap.size() == 1
+        queryRegistryExtension.transactionEntries.size() == 1
 
         when:
         exec1.submit({
@@ -84,7 +82,7 @@ class QueryRegistryExtensionSpec extends Specification {
         noExceptionThrown()
 
         and:
-        queryRegistryExtension.transactionEntryMap.size() == 1
+        queryRegistryExtension.transactionEntries.size() == 1
 
         when:
         exec2.submit({
@@ -92,7 +90,7 @@ class QueryRegistryExtensionSpec extends Specification {
         }).get()
 
         then:
-        queryRegistryExtension.transactionEntryMap.size() == 0
+        queryRegistryExtension.transactionEntries.size() == 0
 
     }
 
@@ -145,7 +143,7 @@ class QueryRegistryExtensionSpec extends Specification {
     def "tabular output matches table structure"() {
         setup:
 
-        assert queryRegistryExtension.transactionEntryMap.size() == 0
+        assert queryRegistryExtension.transactionEntries.size() == 0
         exec1.submit {
             eventBus.post(new BindTransactionEvent(Mock(KernelTransaction)))
         }.get()
@@ -159,7 +157,7 @@ class QueryRegistryExtensionSpec extends Specification {
         println lines[2]
 
         then:
-        queryRegistryExtension.transactionEntryMap.size() == 2
+        queryRegistryExtension.transactionEntries.size() == 2
         lines.size() == 5
         lines[0] == "+---------+----------+--------------------------------------------------------------+-----------------+-----------------+"
         lines[1] == "| time ms | key      | query                                                        | source          | endPoint        |"

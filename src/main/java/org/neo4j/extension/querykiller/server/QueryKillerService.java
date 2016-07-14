@@ -42,12 +42,12 @@ public class QueryKillerService {
 
         long now = System.currentTimeMillis();
         List<Map<String,Object>> result = new ArrayList<>();
-        for (TransactionEntry entry : queryRegistryExtension.getTransactionEntryMap()) {
+        for (TransactionEntry entry : queryRegistryExtension.getTransactionEntries()) {
             long threadId = entry.getThreadId();
             TransportContext transportContext = queryRegistryExtension.transportContextForThread(threadId);
 
             Map<String, Object> map = new HashMap<>();
-            map.put("context", queryRegistryExtension.contextForThread(entry.getThreadId()));
+            map.put("context", queryRegistryExtension.cypherContextForThread(entry.getThreadId()));
             map.put("key", entry.getKey());
             map.put("since", now - entry.getStarted().getTime());
             map.put("thread", entry.getThreadId());

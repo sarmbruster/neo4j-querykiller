@@ -19,7 +19,6 @@ import org.neo4j.extension.querykiller.helper.EventCounters
 import org.neo4j.extension.spock.Neo4jBoltResource
 import org.neo4j.extension.spock.Neo4jUtils
 import org.neo4j.graphdb.DependencyResolver
-import org.neo4j.test.SuppressOutput
 import spock.lang.Shared
 import spock.lang.Specification
 
@@ -66,7 +65,7 @@ class QueryKillerBoltSpec extends Specification {
         eventBus.register(eventCounters)
 
         QueryRegistryExtension queryRegistryExtension = dependencyResolver.resolveDependency(QueryRegistryExtension)
-        assert queryRegistryExtension.transactionEntryMap.size() == 0
+        assert queryRegistryExtension.transactionEntries.size() == 0
     }
 
     def cleanup() {

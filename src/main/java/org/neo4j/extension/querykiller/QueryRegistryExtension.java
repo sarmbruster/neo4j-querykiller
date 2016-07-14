@@ -62,7 +62,7 @@ public class QueryRegistryExtension implements DefaultLifecycle
         if ((transactionEntry != null) && transactionEntry.getKernelTransaction().equals(event.getKernelTransaction())) {
             transactionEntryMap.remove(currentThreadId);
             log.debug("unregistered query for key " + transactionEntry);
-            eventBus.post(new QueryUnregisteredEvent(transactionEntry, contextForThread(currentThreadId) ));
+            eventBus.post(new QueryUnregisteredEvent(transactionEntry, cypherContextForThread(currentThreadId) ));
         } else {
             log.info(event + " is not registered here.");
         }
@@ -70,8 +70,9 @@ public class QueryRegistryExtension implements DefaultLifecycle
 
     @Subscribe
     public void handleCypherContext(CypherContext context) {
-        cypherContextForThread.put(Thread.currentThread().getId(), context);
-        log.debug("set context to " + context);
+        long threadId = Thread.currentThread().getId();
+        cypherContextForThread.put(threadId, context);
+        log.debug("set context to " + context + ", " + transactionEntryMap.get(threadId).getKey());
     }
 
     @Subscribe
@@ -122,7 +123,7 @@ public class QueryRegistryExtension implements DefaultLifecycle
         throw new NoSuchQueryException(transaction);
     }
 
-    public SortedSet<TransactionEntry> getTransactionEntryMap() {
+    public SortedSet<TransactionEntry> getTransactionEntries() {
         return new TreeSet<>(transactionEntryMap.values());
     }
 
@@ -148,7 +149,7 @@ public class QueryRegistryExtension implements DefaultLifecycle
         StringBuilder sb = new StringBuilder(  );
         sb.append(      "+---------+----------+--------------------------------------------------------------+-----------------+-----------------+\n")
                 .append("| time ms | key      | query                                                        | source          | endPoint        |\n");
-        for (TransactionEntry transactionEntry : getTransactionEntryMap()) {
+        for (TransactionEntry transactionEntry : getTransactionEntries()) {
             sb.append(formatEntry(transactionEntry)).append("\n");
         }
 
@@ -163,13 +164,13 @@ public class QueryRegistryExtension implements DefaultLifecycle
         return String.format("| %7d | %8s | %-60.60s | %-15.15s | %-15.15s |",
                 duration,
                 entry.getKey().substring(0, 8),
-                contextForThread(threadId),
+                cypherContextForThread(threadId),
                 transportContext.getRemoteHost(),
                 transportContext.getEndPoint()
         );
     }
 
-    public String contextForThread(long threadId) {
+    public String cypherContextForThread(long threadId) {
         CypherContext context = cypherContextForThread.get(threadId);
         return context == null ? null : context.toString();
     }

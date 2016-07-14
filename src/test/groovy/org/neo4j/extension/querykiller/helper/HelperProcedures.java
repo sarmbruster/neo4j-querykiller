@@ -41,7 +41,6 @@ public class HelperProcedures {
     public void transactionAwareSleep(@Name("duration") long duration)  {
 
         EventBusLifecycle eventBusLifecycle = graphDatabaseAPI.getDependencyResolver().resolveDependency(EventBusLifecycle.class);
-        System.out.println("execution txawaresleep");
         if (eventBusLifecycle!=null) {
 //            eventBusLifecycle.post();
         }

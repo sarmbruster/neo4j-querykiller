@@ -43,13 +43,13 @@ public class QueryRegistryBean extends ManagementBeanProvider {
 
         @Override
         public int getRunningQueriesCount() {
-            return queryRegistryExtension.getTransactionEntryMap().size();
+            return queryRegistryExtension.getTransactionEntries().size();
         }
 
         @Override
         public Collection<Map<String, Object>> getRunningQueries() {
             Collection<Map<String,Object>> retVal = new ArrayList<>();
-            for (TransactionEntry entry: queryRegistryExtension.getTransactionEntryMap()) {
+            for (TransactionEntry entry: queryRegistryExtension.getTransactionEntries()) {
                 try {
                     retVal.add(BeanUtils.describe(entry));
                 } catch (Exception e) {
