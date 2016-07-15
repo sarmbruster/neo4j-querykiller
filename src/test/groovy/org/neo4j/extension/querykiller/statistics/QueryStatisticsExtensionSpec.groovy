@@ -37,7 +37,7 @@ class QueryStatisticsExtensionSpec extends Specification {
 
         when:
         def cypher = "MATCH (n) RETURN n"
-        def entry = new TransactionEntry(Mock(KernelTransaction), 0)
+        def entry = new TransactionEntry(Mock(KernelTransaction), 0, null)
         eventBusLifecycle.post(new QueryUnregisteredEvent(entry, cypher))
 
         then:
@@ -48,7 +48,7 @@ class QueryStatisticsExtensionSpec extends Specification {
 
         when: "adding same query again"
         cypher = "MATCH (n) RETURN n"
-        entry = new TransactionEntry(Mock(KernelTransaction), 0)
+        entry = new TransactionEntry(Mock(KernelTransaction), 0, null)
         eventBusLifecycle.post(new QueryUnregisteredEvent(entry, cypher))
 
         then:
@@ -59,7 +59,7 @@ class QueryStatisticsExtensionSpec extends Specification {
 
         when: "adding another query"
         cypher = "MATCH (n) RETURN count(n)"
-        entry = new TransactionEntry(Mock(KernelTransaction), 0)
+        entry = new TransactionEntry(Mock(KernelTransaction), 0, null)
         eventBusLifecycle.post(new QueryUnregisteredEvent(entry, cypher))
 
         then:
@@ -84,7 +84,7 @@ class QueryStatisticsExtensionSpec extends Specification {
 
         when:
         def cypher = "MATCH (n) RETURN n"
-        def entry = new TransactionEntry(Mock(KernelTransaction), 0)
+        def entry = new TransactionEntry(Mock(KernelTransaction), 0, null)
         eventBusLifecycle.post(new QueryUnregisteredEvent(entry, cypher))
 
         then:

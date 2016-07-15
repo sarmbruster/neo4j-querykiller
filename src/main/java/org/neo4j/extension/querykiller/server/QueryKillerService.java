@@ -4,7 +4,6 @@ import org.codehaus.jackson.map.ObjectMapper;
 import org.neo4j.extension.querykiller.NoSuchQueryException;
 import org.neo4j.extension.querykiller.QueryRegistryExtension;
 import org.neo4j.extension.querykiller.TransactionEntry;
-import org.neo4j.extension.querykiller.events.transport.TransportContext;
 import org.neo4j.helpers.collection.MapUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,7 +14,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -39,22 +37,9 @@ public class QueryKillerService {
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response activeQueries() throws IOException {
-
-        long now = System.currentTimeMillis();
         List<Map<String,Object>> result = new ArrayList<>();
         for (TransactionEntry entry : queryRegistryExtension.getTransactionEntries()) {
-            long threadId = entry.getThreadId();
-            TransportContext transportContext = queryRegistryExtension.transportContextForThread(threadId);
-
-            Map<String, Object> map = new HashMap<>();
-            map.put("context", queryRegistryExtension.cypherContextForThread(entry.getThreadId()));
-            map.put("key", entry.getKey());
-            map.put("since", now - entry.getStarted().getTime());
-            map.put("thread", entry.getThreadId());
-            map.put("remoteHost", transportContext.getRemoteHost());
-            map.put("remoteUser", transportContext.getRemoteUser());
-            map.put("endPoint", transportContext.getEndPoint());
-            result.add(map);
+            result.add(entry.asMap());
         }
 
         ObjectMapper objectMapper = new ObjectMapper();

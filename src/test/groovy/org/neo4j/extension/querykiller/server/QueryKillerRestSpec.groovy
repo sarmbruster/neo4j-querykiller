@@ -239,7 +239,7 @@ class QueryKillerRestSpec extends Specification {
 
         and:
         response.content().size() == 1
-        response.content()[0].context == procedureStatement
+        response.content()[0].query == procedureStatement
 
         when:
         def key = response.content()[0].key
@@ -325,7 +325,7 @@ class QueryKillerRestSpec extends Specification {
 
         and:
         response.content().size() == 1
-        response.content()[0].context == "CALL org.neo4j.extension.querykiller.helper.transactionAwareSleep(200)"
+        response.content()[0].query == "CALL org.neo4j.extension.querykiller.helper.transactionAwareSleep(200)"
         response.content()[0].endPoint == "/db/data/transaction/commit"
 
         cleanup:
@@ -417,7 +417,7 @@ class QueryKillerRestSpec extends Specification {
         threads.each{it.join(5000)}
     }
 
-    def "should 'since' time be accurate"() {
+    def "should 'millis' time be accurate"() {
         setup:
         def numberOfQueries = 10
         def waitTime = 1000 // 1 sec
@@ -436,8 +436,8 @@ class QueryKillerRestSpec extends Specification {
         response.status() == 200
         response.content().size() == numberOfQueries
 
-        and: "since time is longer than wait time"
-        response.content().every { it.since > waitTime }
+        and: "millis time is longer than wait time"
+        response.content().every { it.millis > waitTime }
 
         when: "killing all queries"
         response.content().each {

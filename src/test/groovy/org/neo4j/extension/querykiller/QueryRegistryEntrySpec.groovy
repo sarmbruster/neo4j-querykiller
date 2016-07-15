@@ -38,7 +38,7 @@ class QueryRegistryEntrySpec extends Specification
     {
         setup:
 
-        TransactionEntry queryRegistryEntry = new TransactionEntry(null, 0)
+        TransactionEntry queryRegistryEntry = new TransactionEntry(null, 0, this)
         queryRegistryEntry.endPoint = endPoint
         queryRegistryEntry.remoteHost = remoteHost
         queryRegistryEntry.remoteUser = null
@@ -67,9 +67,9 @@ class QueryRegistryEntrySpec extends Specification
 
     def "should key have 8 characters"() {
         when:
-        def entry1 = new TransactionEntry(null, 0)
+        def entry1 = new TransactionEntry(null, 0, null)
         sleep 1
-        def entry2 = new TransactionEntry(null, 0)
+        def entry2 = new TransactionEntry(null, 0, null)
 
         then:
         entry1.key.size() == 8

@@ -2,12 +2,15 @@ package org.neo4j.extension.querykiller;
 
 import com.google.common.eventbus.EventBus;
 import org.neo4j.extension.querykiller.events.bind.TransactionKillEvent;
+import org.neo4j.extension.querykiller.events.transport.TransportContext;
+import org.neo4j.helpers.collection.MapUtil;
 import org.neo4j.kernel.api.KernelTransaction;
 
 import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Date;
+import java.util.Map;
 
 /**
  * holds information about a {@link KernelTransaction}, which thread it is bound to, when it has been started
@@ -19,12 +22,14 @@ public class TransactionEntry implements Comparable {
     private final long threadId = Thread.currentThread().getId();
     private final KernelTransaction kernelTransaction;
     private final long timeout;
+    private final QueryRegistryExtension queryRegistryExtension;
     private boolean killed = false;
     private String key;
 
-    public TransactionEntry(KernelTransaction kernelTransaction, long timeout) {
+    public TransactionEntry(KernelTransaction kernelTransaction, long timeout, QueryRegistryExtension queryRegistryExtension) {
         this.kernelTransaction = kernelTransaction;
         this.timeout = timeout;
+        this.queryRegistryExtension = queryRegistryExtension;
     }
 
     // key is lazy
@@ -138,4 +143,20 @@ public class TransactionEntry implements Comparable {
     public boolean isDueForTermination(long now) {
         return now > started.getTime() + timeout;
     }
+
+    public Map<String, Object> asMap() {
+        long threadId = getThreadId();
+        TransportContext transportContext = queryRegistryExtension.transportContextForThread(threadId);
+        return MapUtil.map(
+                "millis", new Date().getTime() - getStarted().getTime(),
+                "query", queryRegistryExtension.cypherContextForThread(threadId),
+                "endPoint", transportContext.getEndPoint(),
+                "remoteHost", transportContext.getRemoteHost(),
+                "remoteUser", transportContext.getRemoteUser(),
+                "key", getKey(),
+                "killed", isKilled(),
+                "thread", threadId
+        );
+    }
+
 }

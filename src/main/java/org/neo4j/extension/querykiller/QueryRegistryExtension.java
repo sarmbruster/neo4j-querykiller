@@ -48,9 +48,11 @@ public class QueryRegistryExtension implements DefaultLifecycle
 
     @Subscribe
     public void handleBindTransaction(BindTransactionEvent event) {
-        TransactionEntry transactionEntry = new TransactionEntry(event.getKernelTransaction(), queryTimeout);
+        TransactionEntry transactionEntry = new TransactionEntry(event.getKernelTransaction(), queryTimeout, this);
         transactionEntryMap.put( Thread.currentThread().getId(), transactionEntry);
-        log.debug("registered query for key " + transactionEntry);
+        if (log.isDebugEnabled()) {
+            log.debug("registered query for key " + transactionEntry);
+        }
         eventBus.post(new QueryRegisteredEvent(transactionEntry));
     }
 
@@ -61,10 +63,14 @@ public class QueryRegistryExtension implements DefaultLifecycle
 //        new Exception("HURZ").printStackTrace();
         if ((transactionEntry != null) && transactionEntry.getKernelTransaction().equals(event.getKernelTransaction())) {
             transactionEntryMap.remove(currentThreadId);
-            log.debug("unregistered query for key " + transactionEntry);
+            if (log.isDebugEnabled()) {
+                log.debug("unregistered query for key " + transactionEntry);
+            }
             eventBus.post(new QueryUnregisteredEvent(transactionEntry, cypherContextForThread(currentThreadId) ));
         } else {
-            log.info(event + " is not registered here.");
+            if (log.isDebugEnabled()) {
+                log.info(event + " is not registered here.");
+            }
         }
     }
 
@@ -72,7 +78,9 @@ public class QueryRegistryExtension implements DefaultLifecycle
     public void handleCypherContext(CypherContext context) {
         long threadId = Thread.currentThread().getId();
         cypherContextForThread.put(threadId, context);
-        log.debug("set context to " + context + ", " + transactionEntryMap.get(threadId).getKey());
+        if (log.isDebugEnabled()) {
+            log.debug("set context to " + context + ", " + transactionEntryMap.get(threadId).getKey());
+        }
     }
 
     @Subscribe
@@ -96,7 +104,9 @@ public class QueryRegistryExtension implements DefaultLifecycle
     public TransactionEntry abortQuery(String key) {
         TransactionEntry entry = findQueryRegistryEntryForKey( key );
         entry.kill(eventBus);
-        log.info("aborted query for key " + key);
+        if (log.isDebugEnabled()) {
+            log.info("aborted query for key " + key);
+        }
         transactionEntryMap.remove(entry);
         eventBus.post(new QueryAbortedEvent(entry));
         return entry;
