@@ -23,7 +23,7 @@ To inspect the list of running queries and terminating them `neo4j-querykiller` 
 
 ==== Download or build from source
 
-Either download the latest jar file provided in link:releases/[releases] or build it from source. Use http://www.gradle.org[gradle] to build the project - no need to install gradle separately - we have the gradle wrapper aboard. To build the main jar file:
+Either download the latest jar file provided in link:../../releases/[releases] or build it from source. Use http://www.gradle.org[gradle] to build the project - no need to install gradle separately - we have the gradle wrapper aboard. To build the main jar file:
 
     ./graldew build shadowJar
     
@@ -159,7 +159,7 @@ NB: the statistics can grow large and memory consuming, to clear them:
 
 QueryRegistryExtension is implemented as a kernel extension to Neo4j using link:https://github.com/google/guava/wiki/EventBusExplained[Google Guava's EventBus] as main communication channel .
 
-link:blob/master/src/main/java/org/neo4j/extension/querykiller/agent/WrapNeo4jComponentsAgent.java[JVM agent implementation] instruments couple of internal classes of Neo4j and sends notifications to the event bus. This happens on the following classes:
+link:src/main/java/org/neo4j/extension/querykiller/agent/WrapNeo4jComponentsAgent.java[JVM agent implementation] instruments couple of internal classes of Neo4j and sends notifications to the event bus. This happens on the following classes:
 
 `org.neo4j.cypher.internal.javacompat.ExecutionEngine`::
     Before and after calls to `executeQuery` and `profileQuery` events of type `CypherContext` and `ResetCypherContext` are sent. These events provied access to the cypher query string used to identify it in the list of running queries
@@ -170,7 +170,7 @@ link:blob/master/src/main/java/org/neo4j/extension/querykiller/agent/WrapNeo4jCo
 
 For getting aware of HTTP request data we register a servlet filter `ExposeHttpContext` using a `SPIPluginLifecycle`.
 
-link:blob/master/src/main/java/org/neo4j/extension/querykiller/QueryRegistryExtension.java[QueryRegistryExtension] is the central class listening to all the events. It also maintains data structures to keep track of running transactions, query strings and query contexts.
+link:src/main/java/org/neo4j/extension/querykiller/QueryRegistryExtension.java[QueryRegistryExtension] is the central class listening to all the events. It also maintains data structures to keep track of running transactions, query strings and query contexts.
 
 TODO: add more stuff here
 
