@@ -4,3 +4,5 @@ jdk:
   - oraclejdk8
 script:
   - ./gradlew --info check
+
+after_failure: ./upload-report.sh
