@@ -23,13 +23,13 @@ To inspect the list of running queries and terminating them `neo4j-querykiller` 
 
 ==== Download or build from source
 
-Either download the latest jar file provided in link:releases/ or build it from source. Use [gradle](http://www.gradle.org) to build the project:
+Either download the latest jar file provided in link:releases/[releases] or build it from source. Use http://www.gradle.org[gradle] to build the project - no need to install gradle separately - we have the gradle wrapper aboard. To build the main jar file:
 
     ./graldew build shadowJar
     
 The `shadowJar` task creates one single jar file containing the code of neo4j-querykiller itself and those of its dependencies not being part of the neo4j distribution.
 
-Copy (or symlink) the resulting file `./build/libs/neo4j-querykiller-1.0.0-SNAPSHOT-all.jar` into Neo4j's `/plugins` folder.
+Copy (or symlink) the resulting file `./build/libs/neo4j-querykiller-<version>-all.jar` into Neo4j's `/plugins` folder.
 
 ==== Configuration and setup
 
