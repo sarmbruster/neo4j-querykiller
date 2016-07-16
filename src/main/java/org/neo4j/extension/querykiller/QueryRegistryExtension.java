@@ -157,26 +157,31 @@ public class QueryRegistryExtension implements DefaultLifecycle
     public String formatAsTable()
     {
         StringBuilder sb = new StringBuilder(  );
-        sb.append(      "+---------+----------+--------------------------------------------------------------+-----------------+-----------------+\n")
-                .append("| time ms | key      | query                                                        | source          | endPoint        |\n");
+        sb.append(      "+---------+----------+--------------------------------------------------------------+-----------------+-----------------+-----------------+\n")
+                .append("| millis  | key      | query                                                        | remoteUser      | remoteHost      | endPoint        |\n");
         for (TransactionEntry transactionEntry : getTransactionEntries()) {
             sb.append(formatEntry(transactionEntry)).append("\n");
         }
 
-        sb.append("+---------+----------+--------------------------------------------------------------+-----------------+-----------------+\n");
+        sb.append("+---------+----------+--------------------------------------------------------------+-----------------+-----------------+-----------------+\n");
         return sb.toString();
     }
 
     private String formatEntry(TransactionEntry entry) {
-        long duration = System.currentTimeMillis() - entry.getStarted().getTime();
-        long threadId = entry.getThreadId();
-        TransportContext transportContext = transportContextForThread(threadId);
-        return String.format("| %7d | %8s | %-60.60s | %-15.15s | %-15.15s |",
-                duration,
-                entry.getKey().substring(0, 8),
-                cypherContextForThread(threadId),
-                transportContext.getRemoteHost(),
-                transportContext.getEndPoint()
+        Map<String, Object> entryMap = entry.asMap();
+
+        String query = (String)(entryMap.get("query"));
+        if (query!=null) {
+            query = query.replaceAll("\n", " ");
+        }
+
+        return String.format("| %7d | %8s | %-60.60s | %-15.15s | %-15.15s | %-15.15s |",
+                entryMap.get("millis"),
+                entryMap.get("key"),
+                query,
+                entryMap.get("remoteUser"),
+                entryMap.get("remoteHost"),
+                entryMap.get("endpoint")
         );
     }
 

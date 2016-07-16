@@ -154,16 +154,16 @@ class QueryRegistryExtensionSpec extends Specification {
 
         when:
         def lines = queryRegistryExtension.formatAsTable().split("\n")
-        println lines[2]
+//        println lines[2]
 
         then:
         queryRegistryExtension.transactionEntries.size() == 2
         lines.size() == 5
-        lines[0] == "+---------+----------+--------------------------------------------------------------+-----------------+-----------------+"
-        lines[1] == "| time ms | key      | query                                                        | source          | endPoint        |"
-        lines[2] =~ /^\| ....... \| \w{8} \| null                                                         \| n\/a             \| embedded        \|$/
-        lines[3] =~ /^\| ....... \| \w{8} \| null                                                         \| n\/a             \| embedded        \|$/
-        lines[4] == "+---------+----------+--------------------------------------------------------------+-----------------+-----------------+"
+        lines[0] == "+---------+----------+--------------------------------------------------------------+-----------------+-----------------+-----------------+"
+        lines[1] == "| millis  | key      | query                                                        | remoteUser      | remoteHost      | endPoint        |"
+        lines[2] =~ /^\| ....... \| \w{8} \| null                                                         \| n\/a             \| n\/a             \| null            \|$/
+        lines[3] =~ /^\| ....... \| \w{8} \| null                                                         \| n\/a             \| n\/a             \| null            \|$/
+        lines[4] == "+---------+----------+--------------------------------------------------------------+-----------------+-----------------+-----------------+"
     }
 
 }
