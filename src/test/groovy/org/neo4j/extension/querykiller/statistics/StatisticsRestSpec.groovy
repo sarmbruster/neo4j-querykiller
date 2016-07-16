@@ -7,9 +7,11 @@ import org.neo4j.extension.querykiller.agent.WrapNeo4jComponentsAgent
 import org.neo4j.extension.querykiller.helper.AgentRule
 import org.neo4j.extension.spock.Neo4jServerResource
 import org.neo4j.test.SuppressOutput
+import spock.lang.Ignore
 import spock.lang.Shared
 import spock.lang.Specification
 
+@Ignore("statistics temporarily disable") // TODO: fix this after beta1
 class StatisticsRestSpec extends Specification {
 
     public static final String MOUNTPOINT = "statistics"
