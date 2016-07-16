@@ -1,7 +1,6 @@
 == neo4j-querykiller
 
-[![Release](https://img.shields.io/github/release/sarmbruster/neo4j-querykiller.svg)](https://github.com/sarmbruster/neo4j-querykiller/releases)
-[![Build Status](https://img.shields.io/travis/sarmbruster/neo4j-querykiller.svg)](https://travis-ci.org/sarmbruster/neo4j-querykiller)
+https://github.com/sarmbruster/neo4j-querykiller/releases[image:https://img.shields.io/github/release/sarmbruster/neo4j-querykiller.svg[Release Status]] https://travis-ci.org/sarmbruster/neo4j-querykiller[image:https://img.shields.io/travis/sarmbruster/neo4j-querykiller.svg[Build Status]]
 
 A often asked question from Neo4j users is: Can I terminate a query that is running much longer than expected since it might consume CPU and other resources?
 
