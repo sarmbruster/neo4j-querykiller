@@ -24,7 +24,7 @@ public class QueryStatisticsExtension extends LifecycleAdapter
     private EventBus eventBus;
     private QueryRegistryExtension queryRegistryExtension;
     private final QueryStatisticsExtensionFactory.Dependencies dependencies;
-    public static final Setting<Boolean> STATISTICS_ENABLED_SETTING = Settings.setting("extension.statistics.enabled", Settings.BOOLEAN, Settings.TRUE);
+    public static final Setting<Boolean> STATISTICS_ENABLED_SETTING = Settings.setting("extension.statistics.enabled", Settings.BOOLEAN, Settings.FALSE);
 
     public QueryStatisticsExtension(QueryStatisticsExtensionFactory.Dependencies dependencies) {
         this.dependencies = dependencies;

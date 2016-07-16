@@ -48,13 +48,9 @@ public class QueryRegistryBean extends ManagementBeanProvider {
 
         @Override
         public Collection<Map<String, Object>> getRunningQueries() {
-            Collection<Map<String,Object>> retVal = new ArrayList<>();
-            for (TransactionEntry entry: queryRegistryExtension.getTransactionEntries()) {
-                try {
-                    retVal.add(BeanUtils.describe(entry));
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
+            Collection<Map<String, Object>> retVal = new ArrayList<>();
+            for (TransactionEntry entry : queryRegistryExtension.getTransactionEntries()) {
+                retVal.add(entry.asMap());
             }
             return retVal;
         }
@@ -66,7 +62,7 @@ public class QueryRegistryBean extends ManagementBeanProvider {
 
         @Override
         public Map<String, Map<String, Object>> getStatistics() {
-            Map<String, Map<String,Object>> retVal = new LinkedHashMap<>();
+            Map<String, Map<String, Object>> retVal = new LinkedHashMap<>();
 
             for (Map.Entry<String, QueryStat> entry : statisticsExtension.getSortedStatistics().entrySet()) {
                 try {

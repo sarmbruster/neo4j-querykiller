@@ -7,6 +7,7 @@ import org.neo4j.extension.querykiller.events.query.QueryUnregisteredEvent
 import org.neo4j.helpers.collection.MapUtil
 import org.neo4j.kernel.api.KernelTransaction
 import org.neo4j.kernel.configuration.Config
+import spock.lang.Ignore
 import spock.lang.Specification
 
 class QueryStatisticsExtensionSpec extends Specification {
@@ -22,6 +23,7 @@ class QueryStatisticsExtensionSpec extends Specification {
         qse.statistics.size() == 0
     }
 
+    @Ignore("statistics disabled for first beta") // TODO: reenable this
     def "sending a QueryUnregisteredEvent should update statistics"() {
 
         setup:
