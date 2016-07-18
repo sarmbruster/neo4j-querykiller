@@ -11,7 +11,7 @@ class SpecHelper {
         long started = System.currentTimeMillis()
         while (closure.call() == false) {
             sleep 5;
-            if ((System.currentTimeMillis()-started) > 10*1000) {
+            if ((System.currentTimeMillis()-started) > 100*1000) {
                 closure.owner.log.error("timeout in sleepUntil")
                 throw new TimeoutException("timeout in sleepUntil")
             }
