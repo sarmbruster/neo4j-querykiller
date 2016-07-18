@@ -3,6 +3,6 @@ language: groovy
 jdk:
   - oraclejdk8
 script:
-  - ./gradlew --info check
+  - ./gradlew --info  --stacktrace check
 
 after_failure: ./upload-report.sh
